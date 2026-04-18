@@ -655,42 +655,124 @@ interface Msg { id: string; user: string; text: string; time: string; color: str
 const CHAT_COLORS = ['#00cfff','#a855f7','#f59e0b','#10b981','#ef4444','#ec4899','#6366f1','#fff'];
 
 function ChatScreen() {
-  const { user, t } = useApp() as any;
-  const nick = user?.username || 'Lietotājs';
-  const avatarUri: string | null = null;
+  const { user, token, t } = useApp() as any;
+  const nick = user?.username || '';
+  const color = useChameleon();
 
-  const [msgs, setMsgs] = useState<Msg[]>([
-    { id: '0', user: 'SoundForge', text: '👋 Laipni lūdzam čatā! Dalies ar idejām par mūziku!', time: '—', color: '#a855f7' },
-  ]);
+  const [msgs, setMsgs] = useState<Msg[]>([]);
   const [text, setText] = useState('');
   const [myColor, setMyColor] = useState(CHAT_COLORS[0]);
   const [showColors, setShowColors] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
+  const [onlineCount, setOnlineCount] = useState(1);
   const listRef = useRef<FlatList>(null);
-  const color = useChameleon();
+  const lastTs = useRef('');
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const send = () => {
-    if (!text.trim()) return;
-    const m: Msg = {
-      id: Date.now().toString(),
-      user: nick,
-      text: text.trim(),
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      color: myColor,
-      avatarUri,
+  const toMsg = (m: any): Msg => ({
+    id: m._id,
+    user: m.username,
+    text: m.text,
+    color: m.color || '#00cfff',
+    time: new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+  });
+
+  const scrollDown = () => setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
+
+  // Ielādē vēsturi
+  const loadHistory = async () => {
+    try {
+      const r = await fetch(`${API}/api/chat/history`);
+      const d = await r.json();
+      if (d.msgs?.length) {
+        setMsgs(d.msgs.map(toMsg));
+        lastTs.current = d.msgs[d.msgs.length - 1].createdAt;
+        scrollDown();
+      } else {
+        setMsgs([{
+          id: 'welcome',
+          user: 'SoundForge',
+          text: '👋 Laipni lūdzam čatā! Dalies ar idejām par mūziku!',
+          time: '',
+          color: '#a855f7',
+        }]);
+      }
+    } catch {}
+    setLoading(false);
+  };
+
+  // Polling — jauni ziņojumi ik 3 sekundes
+  const poll = async () => {
+    try {
+      const since = lastTs.current || new Date(0).toISOString();
+      const r = await fetch(`${API}/api/chat/poll?since=${encodeURIComponent(since)}`);
+      const d = await r.json();
+      if (d.msgs?.length) {
+        lastTs.current = d.msgs[d.msgs.length - 1].createdAt;
+        setMsgs(prev => {
+          const ids = new Set(prev.map(m => m.id));
+          const fresh = d.msgs.filter((m: any) => !ids.has(m._id)).map(toMsg);
+          if (!fresh.length) return prev;
+          scrollDown();
+          return [...prev, ...fresh];
+        });
+      }
+    } catch {}
+  };
+
+  useEffect(() => {
+    loadHistory();
+    pollRef.current = setInterval(poll, 3000);
+    // Simulate online count
+    const oc = setInterval(() => setOnlineCount(Math.floor(Math.random() * 5) + 1), 15000);
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+      clearInterval(oc);
     };
-    setMsgs(p => [...p, m]);
+  }, []);
+
+  const send = async () => {
+    const trimmed = text.trim();
+    if (!trimmed || sending) return;
+    if (!token) return;
+    setSending(true);
     setText('');
-    setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 80);
+    try {
+      const r = await fetch(`${API}/api/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ text: trimmed, color: myColor }),
+      });
+      const d = await r.json();
+      if (d.msg) {
+        lastTs.current = d.msg.createdAt;
+        setMsgs(prev => [...prev, toMsg(d.msg)]);
+        scrollDown();
+      }
+    } catch {}
+    setSending(false);
   };
 
   return (
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: '#0a0a0f' }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 24}>
       <View style={[s.hdr, { borderBottomColor: color + '33' }]}>
-        <Text style={[s.logo, { color }]}>💬 {t.chat}</Text>
-        <TouchableOpacity onPress={() => setShowColors(v => !v)} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-          <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: myColor }} />
-          <Ionicons name="color-palette-outline" size={20} color={color} />
-        </TouchableOpacity>
+        <View style={{ flex: 1 }}>
+          <Text style={[s.logo, { color }]}>💬 {t.chat}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 }}>
+            <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#22c55e' }} />
+            <Text style={{ color: '#22c55e', fontSize: 10, fontWeight: '700' }}>LIVE</Text>
+            <Text style={{ color: '#555', fontSize: 10 }}>• {onlineCount} online</Text>
+          </View>
+        </View>
+        {!token ? (
+          <Text style={{ color: '#555', fontSize: 11 }}>Ienāc lai rakstītu</Text>
+        ) : (
+          <TouchableOpacity onPress={() => setShowColors(v => !v)} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: myColor }} />
+            <Ionicons name="color-palette-outline" size={20} color={color} />
+          </TouchableOpacity>
+        )}
       </View>
 
       {showColors && (
@@ -704,7 +786,12 @@ function ChatScreen() {
         </View>
       )}
 
-      <FlatList
+      {loading && (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <Text style={{ color: '#555' }}>Ielādē čatu...</Text>
+        </View>
+      )}
+      {!loading && <FlatList
         ref={listRef}
         data={msgs}
         keyExtractor={m => m.id}
@@ -729,7 +816,14 @@ function ChatScreen() {
             </View>
           );
         }}
-      />
+      />}
+
+      {!token && (
+        <View style={{ backgroundColor: '#1a1a25', margin: 12, borderRadius: 14, padding: 14, alignItems: 'center', gap: 6 }}>
+          <Ionicons name="lock-closed-outline" size={20} color="#555" />
+          <Text style={{ color: '#888', fontSize: 13 }}>Ielogojies lai rakstītu čatā</Text>
+        </View>
+      )}
 
       <View style={[ct.inp, { borderTopColor: myColor + '33' }]}>
           <View style={[ct.colorIndicator, { backgroundColor: myColor }]} />
@@ -743,8 +837,16 @@ function ChatScreen() {
             returnKeyType="send"
             multiline
           />
-          <TouchableOpacity onPress={send} style={[ct.sendBtn, { backgroundColor: text.trim() ? myColor : '#222' }]}>
-            <Ionicons name="send" size={18} color={text.trim() ? '#000' : '#555'} />
+          <TouchableOpacity
+            onPress={send}
+            disabled={sending || !token}
+            style={[ct.sendBtn, { backgroundColor: (text.trim() && !sending && !!token) ? myColor : '#222' }]}
+          >
+            <Ionicons
+              name={sending ? 'hourglass-outline' : 'send'}
+              size={18}
+              color={(text.trim() && !sending && !!token) ? '#000' : '#555'}
+            />
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -1228,23 +1330,28 @@ export default function MainApp() {
   const color = useChameleon(3200);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const { isPlaying } = useApp();
+
   const resetTimer = useCallback(() => {
     if (timer.current) clearTimeout(timer.current);
+    if (isPlaying) return; // Neizlogojamies kamēr mūzika spēlē!
     timer.current = setTimeout(logout, INACTIVITY_MS);
-  }, [logout]);
+  }, [logout, isPlaying]);
 
   useEffect(() => {
     resetTimer();
     const sub = AppState.addEventListener('change', state => {
       if (state === 'background' || state === 'inactive') {
         if (timer.current) clearTimeout(timer.current);
-        timer.current = setTimeout(logout, 30000);
+        if (!isPlaying) {
+          timer.current = setTimeout(logout, 30 * 60 * 1000); // 30 min fonā
+        }
       } else {
         resetTimer();
       }
     });
     return () => { sub.remove(); if (timer.current) clearTimeout(timer.current); };
-  }, []);
+  }, [isPlaying]);
 
   const TABS = [
     { id: 'home',    icon: 'home-outline',          label: t.home },

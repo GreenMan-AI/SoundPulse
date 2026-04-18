@@ -118,13 +118,28 @@ export default function AdminScreen() {
 
   const saveTicker = async () => {
     try {
-      await fetch(`${API}/api/ticker`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ text: ticker, active: tickerActive }),
-      });
-      Alert.alert('✅', 'Ticker saglabāts!');
-    } catch {}
+      if (tickerActive && !ticker.trim()) {
+        Alert.alert('Kļūda', 'Ievadi ziņojuma tekstu!');
+        return;
+      }
+      const endpoint = tickerActive ? '/api/admin/ticker' : '/api/admin/ticker';
+      const method = tickerActive ? 'POST' : 'DELETE';
+      if (tickerActive) {
+        await fetch(`${API}/api/admin/ticker`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ text: ticker }),
+        });
+      } else {
+        await fetch(`${API}/api/admin/ticker`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${token}` },
+        });
+      }
+      Alert.alert('✅', tickerActive ? `Ziņojums ieslēgts: "${ticker}"` : 'Ziņojums izslēgts');
+    } catch (e: any) {
+      Alert.alert('Kļūda', 'Neizdevās saglabāt ticker');
+    }
   };
 
   const openUserModal = (u: any) => {
