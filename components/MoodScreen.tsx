@@ -4,7 +4,7 @@ import {
 } from 'react-native';
 import { useState, useEffect, useRef } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import { useApp } from '../AppContext';
+import { useApp } from './AppContext';
 
 const { width: SW } = Dimensions.get('window');
 

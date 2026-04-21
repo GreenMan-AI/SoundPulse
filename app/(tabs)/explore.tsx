@@ -1,104 +1,99 @@
-import { View, Text, StyleSheet, TextInput, FlatList, TouchableOpacity } from 'react-native';
-import { useState } from 'react';
+import { View, Text, StyleSheet, TextInput, FlatList, TouchableOpacity, Platform }from 'react-native';
+import { useState, useMemo } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import { useApp } from '../../AppContext';
+import { useApp } from '../../components/AppContext';
+import TrackCard from '../../components/TrackCard';
 
-const GENRES = ['Visi', 'Hip-Hop', 'Metal', 'Pop', 'Electronic', 'Rock', 'Jazz'];
+const COLORS = [
+  '#00cfff','#a855f7','#f59e0b','#10b981',
+  '#ef4444','#6366f1','#ec4899','#22d3ee',
+];
+
+type SortKey = 'title' | 'artist' | 'plays';
 
 export default function ExploreScreen() {
-  const { tracks, setPlaying, playing, isPlaying, addToPlaylist, t } = useApp();
+  const { tracks, t } = useApp();
   const [search, setSearch] = useState('');
-  const [genre, setGenre] = useState('Visi');
+  const [sort, setSort]     = useState<SortKey>('title');
 
-  const filtered = tracks.filter((tr: any) => {
-    const matchSearch =
-      tr.title?.toLowerCase().includes(search.toLowerCase()) ||
-      tr.artist?.toLowerCase().includes(search.toLowerCase());
-    // Atbalsta gan folder, gan tags masīvu, gan title meklēšanu pēc žanra
-    const matchGenre =
-      genre === 'Visi' ||
-      tr.folder === genre ||
-      tr.genre === genre ||
-      (Array.isArray(tr.tags) && tr.tags.includes(genre)) ||
-      tr.title?.toLowerCase().includes(genre.toLowerCase());
-    return matchSearch && matchGenre;
-  });
+  const filtered = useMemo(() => {
+    let list = [...tracks];
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      list = list.filter((tr: any) =>
+        tr.title?.toLowerCase().includes(q) ||
+        tr.artist?.toLowerCase().includes(q)
+      );
+    }
+    list.sort((a: any, b: any) => {
+      if (sort === 'plays') return (b.plays || 0) - (a.plays || 0);
+      return (a[sort] || '').toLowerCase()
+        .localeCompare((b[sort] || '').toLowerCase());
+    });
+    return list;
+  }, [tracks, search, sort]);
+
+  const SORTS: [SortKey, string][] = [
+    ['title',  '🔤 Nosaukums'],
+    ['artist', '🎤 Izpildītājs'],
+    ['plays',  '🔥 Populāri'],
+  ];
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>🔍 {t.search}</Text>
+    <View style={s.container}>
+      <View style={s.header}>
+        <Text style={s.title}>🔍 {t.search}</Text>
       </View>
 
-      <View style={styles.searchBox}>
-        <Ionicons name="search" size={18} color="#555" />
+      <View style={s.searchBox}>
+        <Ionicons name="search" size={17} color="#555" />
         <TextInput
-          style={styles.input}
+          style={s.searchInput}
           placeholder={t.searchPlaceholder}
-          placeholderTextColor="#444"
+          placeholderTextColor="#333"
           value={search}
           onChangeText={setSearch}
         />
         {search.length > 0 && (
           <TouchableOpacity onPress={() => setSearch('')}>
-            <Ionicons name="close-circle" size={18} color="#555" />
+            <Ionicons name="close-circle" size={17} color="#555" />
           </TouchableOpacity>
         )}
       </View>
 
-      <FlatList
-        horizontal
-        data={GENRES}
-        keyExtractor={(i) => i}
-        contentContainerStyle={styles.genres}
-        showsHorizontalScrollIndicator={false}
-        renderItem={({ item }) => (
+      <View style={s.sortRow}>
+        {SORTS.map(([id, label]) => (
           <TouchableOpacity
-            style={[styles.genreBtn, genre === item && styles.genreBtnActive]}
-            onPress={() => setGenre(item)}
+            key={id}
+            style={[s.sortBtn, sort === id && s.sortActive]}
+            onPress={() => setSort(id)}
           >
-            <Text style={[styles.genreTxt, genre === item && styles.genreTxtActive]}>{item}</Text>
+            <Text style={[s.sortTxt, sort === id && s.sortTxtActive]}>
+              {label}
+            </Text>
           </TouchableOpacity>
-        )}
-      />
+        ))}
+      </View>
+
+      <Text style={s.resultCount}>{filtered.length} rezultāti</Text>
 
       <FlatList
         data={filtered}
-        keyExtractor={(tr: any) => tr._id}
-        contentContainerStyle={{ padding: 14, paddingBottom: 130 }}
-        renderItem={({ item }: any) => {
-          const isActive = playing?._id === item._id;
-          return (
-            <View style={[styles.track, isActive && styles.trackActive]}>
-              <TouchableOpacity style={styles.trackLeft} onPress={() => setPlaying(item)}>
-                <View style={styles.trackIcon}>
-                  <Ionicons name="musical-note" size={20} color={isActive ? '#00cfff' : '#555'} />
-                </View>
-                <View style={styles.info}>
-                  <Text style={[styles.trackTitle, isActive && styles.trackTitleActive]} numberOfLines={1}>
-                    {item.title || t.noTitle}
-                  </Text>
-                  <Text style={styles.trackArtist}>{item.artist || t.noArtist}</Text>
-                </View>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => addToPlaylist(item)} style={styles.addBtn}>
-                <Ionicons name="add-circle-outline" size={22} color="#00cfff55" />
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => setPlaying(item)}>
-                <Ionicons
-                  name={isActive && isPlaying ? 'pause-circle' : 'play-circle-outline'}
-                  size={30}
-                  color="#00cfff"
-                />
-              </TouchableOpacity>
-            </View>
-          );
-        }}
+        keyExtractor={(item: any) => item._id}
+        contentContainerStyle={{ paddingHorizontal: 12, paddingBottom: 150 }}
+        renderItem={({ item, index }: any) => (
+          <TrackCard
+            track={item}
+            index={index}
+            accentColor={COLORS[index % COLORS.length]}
+            showAddBtn
+          />
+        )}
         ListEmptyComponent={
-          <View style={styles.empty}>
-            <Ionicons name="search-outline" size={50} color="#222" />
-            <Text style={styles.emptyText}>
-              {genre !== 'Visi' ? `Nav dziesmu žanrā "${genre}"` : t.noTracks}
+          <View style={s.empty}>
+            <Ionicons name="search-outline" size={50} color="#1a1a25" />
+            <Text style={s.emptyTxt}>
+              {search ? 'Nav rezultātu' : t.noTracks}
             </Text>
           </View>
         }
@@ -107,40 +102,42 @@ export default function ExploreScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0a0a0f' },
-  header: { paddingHorizontal: 20, paddingTop: 54, paddingBottom: 14, backgroundColor: '#111118' },
+  header: {
+    paddingHorizontal: 20, paddingTop: 54, paddingBottom: 14,
+    backgroundColor: '#111118',
+  },
   title: { fontSize: 22, fontWeight: '800', color: '#00cfff' },
   searchBox: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#1a1a25', margin: 14, borderRadius: 12,
-    paddingHorizontal: 14, paddingVertical: 10,
-    borderWidth: 1, borderColor: '#2a2a35',
+    backgroundColor: '#111118',
+  marginHorizontal: 15,
+  marginTop: Platform.OS === 'ios' ? 60 : 40, // Lai neaizsedz pulksteni
+  paddingHorizontal: 15,
+  borderRadius: 12,
+  height: 50,
   },
-  input: { flex: 1, color: '#fff', marginLeft: 8, fontSize: 15 },
-  genres: { paddingHorizontal: 14, paddingBottom: 10 },
-  genreBtn: {
-    paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20,
-    backgroundColor: '#1a1a25', marginRight: 8,
+  searchInput: { flex: 1, color: '#fff', fontSize: 14 },
+  sortRow: {
+    flexDirection: 'row', paddingHorizontal: 12,
+    gap: 8, marginBottom: 6,
   },
-  genreBtnActive: { backgroundColor: '#00cfff' },
-  genreTxt: { color: '#555', fontWeight: '600' },
-  genreTxtActive: { color: '#000' },
-  track: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#111118', borderRadius: 12, padding: 10, marginBottom: 6,
+  sortBtn: {
+    paddingHorizontal: 12, paddingVertical: 6,
+    borderRadius: 20, backgroundColor: '#111118',
+    borderWidth: 1, borderColor: '#1e1e2a',
   },
-  trackActive: { backgroundColor: '#0d1a2a', borderWidth: 1, borderColor: '#00cfff33' },
-  trackLeft: { flex: 1, flexDirection: 'row', alignItems: 'center' },
-  trackIcon: {
-    width: 40, height: 40, borderRadius: 20,
-    backgroundColor: '#1a1a25', justifyContent: 'center', alignItems: 'center', marginRight: 10,
+  sortActive: {
+    backgroundColor: '#00cfff22',
+    borderColor: '#00cfff55',
   },
-  info: { flex: 1 },
-  trackTitle: { color: '#ccc', fontSize: 14, fontWeight: '600' },
-  trackTitleActive: { color: '#00cfff' },
-  trackArtist: { color: '#555', fontSize: 12, marginTop: 2 },
-  addBtn: { padding: 6 },
-  empty: { alignItems: 'center', marginTop: 60, gap: 10 },
-  emptyText: { color: '#333', fontSize: 16, textAlign: 'center' },
+  sortTxt: { color: '#444', fontSize: 12, fontWeight: '600' },
+  sortTxtActive: { color: '#00cfff' },
+  resultCount: {
+    color: '#333', fontSize: 11,
+    paddingHorizontal: 14, marginBottom: 4,
+  },
+  empty: { alignItems: 'center', marginTop: 60, gap: 12 },
+  emptyTxt: { color: '#333', fontSize: 14 },
 });

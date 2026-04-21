@@ -8,8 +8,9 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
 import * as ImagePicker from 'expo-image-picker';
-import { useApp, API } from '../AppContext';
+import { useApp, API } from './AppContext';
 import { Lang } from '../i18n';
+import * as DocumentPicker from 'expo-document-picker';
 
 const { width: SW, height: SH } = Dimensions.get('window');
 const INACTIVITY_MS = 2 * 60 * 1000; // 2 minūtes
@@ -211,7 +212,7 @@ function HomeScreen({ onNavigate }: { onNavigate: (tab: string) => void }) {
         <View style={hm.heroInner}>
           <Text style={[hm.greeting, { color: color + 'cc' }]}>👋 {user?.username}</Text>
           <Text style={[hm.heroTitle, { color, textShadowColor: color, textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 20 }]}>
-            SoundForge
+            SoundPulse
           </Text>
           <Text style={hm.heroSub}>{t.appDesc}</Text>
         </View>
@@ -361,7 +362,6 @@ function MusicScreen() {
 
   const pickAudio = async () => {
     try {
-      const { default: DocumentPicker } = await import('expo-document-picker');
       const res = await DocumentPicker.getDocumentAsync({
         type: ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/x-wav', 'audio/mp4', 'audio/m4a', 'audio/x-m4a'],
         copyToCacheDirectory: true,
@@ -671,11 +671,13 @@ function ChatScreen() {
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const toMsg = (m: any): Msg => ({
-    id: m._id,
-    user: m.username,
-    text: m.text,
+    id: m._id || m.id || String(Date.now() + Math.random()),
+    user: m.username || m.user || 'Anonīms',
+    text: m.text || '',
     color: m.color || '#00cfff',
-    time: new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    time: m.createdAt
+      ? new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      : (m.time || ''),
   });
 
   const scrollDown = () => setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
@@ -692,7 +694,7 @@ function ChatScreen() {
       } else {
         setMsgs([{
           id: 'welcome',
-          user: 'SoundForge',
+          user: 'SoundPulse',
           text: '👋 Laipni lūdzam čatā! Dalies ar idejām par mūziku!',
           time: '',
           color: '#a855f7',

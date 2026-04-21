@@ -136,7 +136,14 @@ echo ""
 echo -e "${CYAN}── Izpako backup ─────────────────────────────────────${NC}"
 
 TEMP_DIR=$(mktemp -d)
-unzip -q "$SELECTED" -d "$TEMP_DIR" 2>/dev/null
+if command -v unzip &>/dev/null; then
+  unzip -q "$SELECTED" -d "$TEMP_DIR" 2>/dev/null
+elif command -v 7z &>/dev/null; then
+  7z x "$SELECTED" -o"$TEMP_DIR" > /dev/null 2>&1
+else
+  err "Nav unzip vai 7z! Instalē: winget install 7zip"
+  exit 1
+fi
 
 # Atrod backup saturu
 BACKUP_ROOT=""

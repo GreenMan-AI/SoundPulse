@@ -1,99 +1,22 @@
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
-  Share, Linking, Alert, Dimensions,
-} from 'react-native';
+  Share, Linking, Alert, Dimensions, Image,Platform } from 'react-native';
 import { useState, useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import { useApp } from '../../AppContext';
+import { useApp } from '../../components/AppContext';
 
 const { width: SW } = Dimensions.get('window');
-const APP_URL = 'https://expo.dev/accounts/greenman/projects/SoundForge';
-const DOWNLOAD_URL = 'https://expo.dev/artifacts/eas/SoundForge.apk'; // aizstāj ar īsto .apk saiti
+const APP_URL = 'https://expo.dev/accounts/greenman/projects/SoundPulse';
+const DOWNLOAD_URL = 'https://github.com/GreenMan-AI/greenman-ai/releases/latest/download/SoundPulse.apk';
 const SERVER_URL = 'https://greenman-ai.onrender.com';
 
-// Vienkāršs QR kods bez bibliotēkas — SVG rasējums
-function SimpleQR({ value, size = 200, color = '#00cfff' }: { value: string; size?: number; color?: string }) {
-  // Ģenerē vienkāršu vizuālu QR reprezentāciju
-  // Īstam QR kodam vajag expo-modules vai react-native-qrcode-svg
-  const cells = 21;
-  const cell = size / cells;
-
-  // Stūru kvadrāti (QR position detection markers)
-  const markers = [
-    { x: 0, y: 0 }, { x: cells - 7, y: 0 }, { x: 0, y: cells - 7 }
-  ];
-
+// QR kods — izmanto qrserver.com API lai ģenerētu īstu QR
+function RealQR({ value, size = 200, color = '00cfff' }: { value: string; size?: number; color?: string }) {
+  const colorHex = color.replace('#', '');
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(value)}&bgcolor=0a0a0f&color=${colorHex}&format=png&qzone=2`;
   return (
-    <View style={{ width: size, height: size, backgroundColor: '#fff', padding: 8, borderRadius: 12 }}>
-      <View style={{ flex: 1, position: 'relative' }}>
-        {/* QR stūru marķieri */}
-        {markers.map((m, i) => (
-          <View key={i} style={{
-            position: 'absolute',
-            left: m.x * (size / cells),
-            top: m.y * (size / cells),
-            width: 7 * (size / cells),
-            height: 7 * (size / cells),
-            borderWidth: 2 * (size / cells) / cell,
-            borderColor: color,
-            borderRadius: 2,
-          }}>
-            <View style={{
-              position: 'absolute',
-              top: 1 * (size / cells),
-              left: 1 * (size / cells),
-              width: 5 * (size / cells),
-              height: 5 * (size / cells),
-              backgroundColor: color,
-              borderRadius: 1,
-            }}>
-              <View style={{
-                position: 'absolute',
-                top: 1 * (size / cells),
-                left: 1 * (size / cells),
-                width: 3 * (size / cells),
-                height: 3 * (size / cells),
-                backgroundColor: '#fff',
-              }} />
-            </View>
-          </View>
-        ))}
-
-        {/* Hameleons dots centrā */}
-        <View style={{
-          position: 'absolute',
-          top: size * 0.35,
-          left: size * 0.35,
-          width: size * 0.3,
-          height: size * 0.3,
-          backgroundColor: color + '22',
-          borderRadius: size * 0.15,
-          borderWidth: 2,
-          borderColor: color,
-          justifyContent: 'center',
-          alignItems: 'center',
-        }}>
-          <Text style={{ fontSize: size * 0.12 }}>🎵</Text>
-        </View>
-
-        {/* Random dots lai izskatās kā QR */}
-        {Array.from({ length: 60 }, (_, i) => {
-          const seed = (i * 137 + 41) % 100;
-          const x = ((i * 13) % (cells - 8)) + 8;
-          const y = ((i * 7 + 3) % (cells - 8)) + 8;
-          return seed > 45 ? (
-            <View key={`d${i}`} style={{
-              position: 'absolute',
-              left: x * (size / cells),
-              top: y * (size / cells),
-              width: (size / cells) - 1,
-              height: (size / cells) - 1,
-              backgroundColor: color,
-              borderRadius: 1,
-            }} />
-          ) : null;
-        })}
-      </View>
+    <View style={{ width: size, height: size, borderRadius: 12, overflow: 'hidden', backgroundColor: '#0a0a0f' }}>
+      <Image source={{ uri: qrUrl }} style={{ width: size, height: size }} resizeMode="contain" />
     </View>
   );
 }
@@ -129,8 +52,8 @@ export default function ShareScreen() {
   const shareApp = async () => {
     try {
       await Share.share({
-        message: `🎵 SoundForge — Mūzikas aplikācija!\n\nKlausies mūziku, veido playlistes un dalies ar idejām!\n\nLejupielādē šeit: ${APP_URL}`,
-        title: 'SoundForge',
+        message: `🎵 SoundPulse — Mūzikas aplikācija!\n\nKlausies mūziku, veido playlistes un dalies ar tām!\n\nLejupielādē šeit: ${APP_URL}`,
+        title: 'SoundPulse',
       });
     } catch {}
   };
@@ -149,10 +72,10 @@ export default function ShareScreen() {
       {/* QR kods */}
       <View style={[s.qrCard, { borderColor: color + '44' }]}>
         <Text style={[s.qrTitle, { color }]}>🔗 QR kods</Text>
-        <Text style={s.qrSub}>Skenē lai iegūtu aplikāciju</Text>
+        <Text style={s.qrSub}>Skenē lai daltos ar aplikāciju</Text>
 
         <View style={s.qrWrap}>
-          <SimpleQR value={APP_URL} size={200} color={color} />
+          <RealQR value={APP_URL} size={200} color={color} />
         </View>
 
         <Text style={[s.qrUrl, { color: color + '99' }]} numberOfLines={1}>{APP_URL}</Text>
@@ -190,26 +113,37 @@ export default function ShareScreen() {
       <View style={{ paddingHorizontal: 16 }}>
         <Text style={[s.secTitle, { color }]}>📤 Kā dalīties</Text>
 
-        {[
+     {[
           {
-            icon: 'logo-whatsapp', label: 'WhatsApp',
+            icon: 'logo-whatsapp',
+            label: 'WhatsApp',
             color: '#25D366',
-            action: () => openUrl(`https://wa.me/?text=${encodeURIComponent(`🎵 SoundForge — Mūzikas aplikācija! ${APP_URL}`)}`),
+            action: () => {
+              const currentUrl = typeof APP_URL !== 'undefined' ? APP_URL : 'https://soundforge.app';
+              openUrl(`https://wa.me/?text=${encodeURIComponent(`🎵 SoundPulse — Mūzikas aplikācija! ${currentUrl}`)}`);
+            },
           },
           {
-            icon: 'logo-telegram', label: 'Telegram',
+            icon: 'paper-plane',
+            label: 'Telegram',
             color: '#229ED9',
-            action: () => openUrl(`https://t.me/share/url?url=${encodeURIComponent(APP_URL)}&text=${encodeURIComponent('🎵 SoundForge — Mūzikas aplikācija!')}`),
+            action: () => {
+              const currentUrl = typeof APP_URL !== 'undefined' ? APP_URL : 'https://soundforge.app';
+              const message = '🎵 SoundPulse — Mūzikas aplikācija!';
+              const telegramUrl = `https://t.me/share/url?url=${encodeURIComponent(currentUrl)}&text=${encodeURIComponent(message)}`;
+              openUrl(telegramUrl);
+            },
           },
           {
-            icon: 'share-social', label: 'Cits',
-            color: color,
+            icon: 'share-social',
+            label: 'Cits',
+            color: color, // Pārliecinies, ka 'color' mainīgais ir definēts augstāk
             action: shareApp,
           },
         ].map((item, i) => (
           <TouchableOpacity key={i} style={[s.shareRow, { borderColor: item.color + '33' }]} onPress={item.action}>
             <View style={[s.shareIcon, { backgroundColor: item.color + '22' }]}>
-              <Ionicons name={item.icon as any} size={24} color={item.color} />
+              <Ionicons name="paper-plane" size={24} color="#0088cc" />
             </View>
             <Text style={s.shareLabel}>{item.label}</Text>
             <Ionicons name="chevron-forward" size={18} color="#333" />
@@ -219,10 +153,10 @@ export default function ShareScreen() {
 
       {/* Par aplikāciju */}
       <View style={[s.aboutCard, { borderColor: color + '33' }]}>
-        <Text style={[s.aboutTitle, { color }]}>ℹ️ Par SoundForge</Text>
+        <Text style={[s.aboutTitle, { color }]}>ℹ️ Par SoundPulse</Text>
         <Text style={s.aboutTxt}>
-          SoundForge ir Latvijā radīta mūzikas straumēšanas platforma.
-          Klausies mūziku, veido playlistes, dalies ar idejām čatā un atrod
+          SoundPulse ir Latvijā radīta mūzikas straumēšanas platforma.
+          Klausies mūziku, veido playlistes, dalies ar idejām un atrod
           jaunas dziesmas. Pieejama Android ierīcēs.
         </Text>
         <View style={[s.versionBadge, { backgroundColor: color + '22', borderColor: color + '44' }]}>
@@ -235,7 +169,7 @@ export default function ShareScreen() {
 
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#0a0a0f' },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 54, paddingBottom: 14, backgroundColor: '#111118', borderBottomWidth: 1 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: Platform.OS === 'ios' ? 60 : 45, paddingBottom: 14, backgroundColor: '#111118', borderBottomWidth: 1 },
   logo: { fontSize: 20, fontWeight: '800' },
   qrCard: { margin: 16, backgroundColor: '#111118', borderRadius: 20, padding: 20, alignItems: 'center', borderWidth: 1 },
   qrTitle: { fontSize: 18, fontWeight: '800', marginBottom: 4 },
