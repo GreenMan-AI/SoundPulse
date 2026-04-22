@@ -4,22 +4,22 @@
     "slug": "SoundPulse",
     "version": "1.0.1",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/ic_launcher.png",
     "scheme": "soundpulse",
-    "userInterfaceStyle": "dark",
+    "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/ic_launcher.png",
       "resizeMode": "contain",
       "backgroundColor": "#0a0a0f"
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.greenmanai.soundpulse"
+      "bundleIdentifier": "com.agnis.soundpulse"
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/ic_launcher.png",
         "backgroundColor": "#0a0a0f"
       },
       "package": "com.greenmanai.soundpulse",
