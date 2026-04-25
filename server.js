@@ -84,7 +84,7 @@ app.use((req, res, next) => {
     "font-src 'self' https://fonts.gstatic.com data:; " +
     "img-src 'self' data: blob: https:; " +
     "media-src 'self' blob: https: https://*.cloudinary.com https://res.cloudinary.com; " +
-    "connect-src 'self' https://*.cloudinary.com https://api.cloudinary.com https://res.cloudinary.com https://greenman-ai.onrender.com; " +
+    "connect-src 'self' https://*.cloudinary.com https://api.cloudinary.com https://res.cloudinary.com export const API = 'https://soundpulse-backend-e0e2.onrender.com'; " +
     "worker-src 'self' blob:; " +
     "frame-ancestors 'none';"
   );
