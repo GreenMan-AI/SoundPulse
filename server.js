@@ -192,9 +192,12 @@ const uploadAudio = multer({ storage: audioStorage, fileFilter: audioFilter, lim
 // Izmanto savu saiti ar +srv un GreenMan lietotāju
 const MONGODB_URI = "mongodb+srv://GreenMan:Draconball1@greenman.ijlx6sr.mongodb.net/SoundPulse?retryWrites=true&w=majority";
 mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log('✅ MongoDB savienots'))
-  .catch(e => { console.error('❌ MongoDB:', e.message); process.exit(1); });
-
+  useNewUrlParser: true, 
+  useUnifiedTopology: true 
+})
+  .then(() => console.log("✅ MongoDB savienojums veiksmīgs!"))
+  .catch(err => console.error("❌ MongoDB kļūda:", err));
+  
 // ── Schemas ──────────────────────────────────────
 const UserSchema = new mongoose.Schema({
   username:     { type: String, required: true, unique: true, trim: true },
