@@ -44,6 +44,10 @@ if (fs.existsSync(_cssSrc)) fs.copyFileSync(_cssSrc, _cssDest);
 
 // ── CORS ──────────────────────────────────────────────
 app.use((req, res, next) => {
+  const express = require('express');
+  const cors = require('cors'); 
+  const app = express();
+app.use(express.json());
   const origin = req.headers.origin || '';
   const allowed = [
     'https://greenman-ai.onrender.com',
@@ -65,7 +69,7 @@ app.use((req, res, next) => {
 });
 
 // ── Static files — PIRMS maršrutiem ──────────────────
-app.use(express.static('public', { maxAge: '1d' }));
+app.use(express.static(path.join(__dirname, 'app', 'tabs')))
 
 // ══════════════════════════════════════════════════
 //  SECURITY HEADERS
@@ -320,7 +324,7 @@ function requireAdmin(req, res, next) {
 
 async function seedAdmin() {
   const u = process.env.ADMIN_USER || 'admin';
-  const p = process.env.ADMIN_PASS || 'admin123';
+  const p = process.env.ADMIN_PASS || 'Draconball1';
   if (!await User.findOne({ username: u })) {
     const salt = crypto.randomBytes(32).toString('hex');
     await User.create({ username: u, passwordHash: hashPwd(p, salt), salt, role: 'admin' });
@@ -472,11 +476,6 @@ app.post('/api/change-password', requireAuth, async (req, res) => {
   }
 });
 
-// ŠIM JĀBŪT PAŠĀS BEIGĀS
-app.listen(process.env.PORT || 3000, () => {
-  console.log('Serveris griežas!');
-});
-
 // Admin: reset another user's password
 app.post('/api/admin/reset-password', requireAuth, requireAdmin, async (req, res) => {
   try {
@@ -494,6 +493,11 @@ app.post('/api/admin/reset-password', requireAuth, requireAdmin, async (req, res
     await Session.deleteMany({ username });
     res.json({ ok: true, message: `Parole atiestatīta lietotājam ${username}` });
   } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// ŠIM JĀBŪT PAŠĀS BEIGĀS
+app.listen(process.env.PORT || 3000, () => {
+  console.log('Serveris griežas!');
 });
 
 // ══════════════════════════════════════════════════
@@ -1373,15 +1377,17 @@ self.addEventListener('fetch',e=>{const u=new URL(e.request.url);if(u.pathname.s
 });
 
 // SPA catch-all — atgriež index.html visiem non-API pieprasījumiem
-app.get('*', (req, res) => {
-  const idx = path.join(__dirname, 'public', 'index.html');
+app.get(/^(?!\/api).+/, (req, res) => {
+  // Šeit mēs norādām precīzu ceļu līdz index.html
+  const idx = path.join(__dirname, 'app', 'tabs', 'index.html');
+  
   if (fs.existsSync(idx)) {
     res.sendFile(idx);
   } else {
-    res.status(404).send('index.html nav atrasts public/ mapē');
+    // Ja nu tomēr kaut kas noiet greizi, šis paziņojums tev precīzi pateiks, kur ir kļūda
+    res.status(404).send('Kļūda: index.html nav atrasts mapē app/tabs/');
   }
 });
-
 mongoose.connection.once('open', async () => {
   await seedAdmin();
   server.listen(PORT, () => console.log(`
