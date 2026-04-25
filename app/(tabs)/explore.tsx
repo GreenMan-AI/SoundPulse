@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, TextInput, FlatList, TouchableOpacity, Platform }from 'react-native';
+import { View, Text, StyleSheet, TextInput, FlatList, TouchableOpacity } from 'react-native';
 import { useState, useMemo } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../../components/AppContext';
@@ -112,11 +112,15 @@ const s = StyleSheet.create({
   searchBox: {
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: '#111118',
-  marginHorizontal: 15,
-  marginTop: Platform.OS === 'ios' ? 60 : 40, // Lai neaizsedz pulksteni
-  paddingHorizontal: 15,
-  borderRadius: 12,
-  height: 50,
+    marginHorizontal: 14,
+    marginTop: 10,
+    marginBottom: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#1e1e2a',
+    gap: 8,
   },
   searchInput: { flex: 1, color: '#fff', fontSize: 14 },
   sortRow: {
