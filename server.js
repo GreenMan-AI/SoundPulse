@@ -60,7 +60,7 @@ app.use(express.json());
     allowed.some(a => origin.startsWith(a)) ||
     origin.startsWith('exp://') ||
     origin.match(/^http:\/\/192\.168\./);
-  res.setHeader('Access-Control-Allow-Origin', isAllowed ? (origin || '*') : 'https://greenman-ai.onrender.com');
+  res.setHeader('Access-Control-Allow-Origin', isAllowed ? (origin || '*') : 'https://soundpulse-backend-e0e2.onrender.com');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
   res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -189,6 +189,8 @@ const uploadAudio = multer({ storage: audioStorage, fileFilter: audioFilter, lim
 // ══════════════════════════════════════════════════
 //  MONGODB
 // ══════════════════════════════════════════════════
+// Izmanto savu saiti ar +srv un GreenMan lietotāju
+const MONGODB_URI = "mongodb+srv://GreenMan:Draconball1@greenman.ijlx6sr.mongodb.net/SoundPulse?retryWrites=true&w=majority";
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log('✅ MongoDB savienots'))
   .catch(e => { console.error('❌ MongoDB:', e.message); process.exit(1); });
