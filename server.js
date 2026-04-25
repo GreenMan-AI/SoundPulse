@@ -50,7 +50,7 @@ app.use((req, res, next) => {
 app.use(express.json());
   const origin = req.headers.origin || '';
   const allowed = [
-    'https://greenman-ai.onrender.com',
+    'https://soundpulse-backend-e0e2.onrender.com',
     'http://localhost:3000',
     'http://localhost:8081',
     'http://192.168.1',
