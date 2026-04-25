@@ -1,5 +1,5 @@
 import { StatusBar } from 'expo-status-bar';
-import { View } from 'react-native';
+import { View, Text, ActivityIndicator } from 'react-native';
 import { Slot } from 'expo-router';
 import { AppProvider, useApp } from '../components/AppContext';
 import LangScreen from '../components/LangScreen';
