@@ -371,33 +371,81 @@ app.post('/api/register', authLimiter, async (req, res) => {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
+// --- LOGIN MARŠRUTS ---
 app.post('/api/login', authLimiter, async (req, res) => {
   try {
     const { username, password } = req.body || {};
-    if (!username?.trim() || !password)
+    
+    if (!username?.trim() || !password) {
       return res.status(400).json({ error: 'Aizpildi abi laukus' });
+    }
+
     const user = await User.findOne({ username: username.trim() });
-    if (!user || hashPwd(password, user.salt) !== user.passwordHash)
+
+    // --- VIENREIZĒJA ADMIN PAAUGSTINĀŠANA ---
+    // Nomaini 'TAVS_VĀRDS' uz savu lietotājvārdu, lai kļūtu par adminu
+    if (user && user.username === 'admin') { 
+      user.role = 'admin'; 
+      await user.save(); 
+    }
+
+    if (!user || hashPwd(password, user.salt) !== user.passwordHash) {
+      console.log(`❌ Login kļūda lietotājam: ${username}`); 
       return res.status(401).json({ error: 'Nepareizs lietotājvārds vai parole' });
+    }
+
     const token = makeToken();
     await Session.create({ token, username: user.username });
-    res.json({ token, username: user.username, role: user.role, bgUrl: user.bgUrl || '' });
-  } catch(e) { res.status(500).json({ error: e.message }); }
+
+    console.log(`✅ Veiksmīgs login: ${user.username} (${user.role})`);
+    res.json({ 
+      token, 
+      username: user.username, 
+      role: user.role, 
+      bgUrl: user.bgUrl || '' 
+    });
+
+  } catch(e) { 
+    console.error("Servera kļūda login laikā:", e);
+    res.status(500).json({ error: e.message }); 
+  }
 });
 
+// --- LOGOUT MARŠRUTS (Izlabota sintakse) ---
 app.post('/api/logout', requireAuth, async (req, res) => {
-  const token = req.headers['authorization'].replace('Bearer ','').trim();
-  await Session.deleteOne({ token });
-  res.json({ ok: true });
+  try {
+    const authHeader = req.headers['authorization'];
+    if (!authHeader) return res.status(401).json({ error: 'Nav marķiera' });
+    
+    const token = authHeader.replace('Bearer ', '').trim();
+    await Session.deleteOne({ token });
+    res.json({ ok: true });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
+// --- ME (Lietotāja dati) ---
 app.get('/api/me', requireAuth, async (req, res) => {
-  const user = await User.findOne({ username: req.user.username });
-  const unread = (user.notifications||[]).filter(n=>!n.read).length;
-  res.json({ username: user.username, role: user.role, bgUrl: user.bgUrl||'', favorites: user.favorites||[], myPlaylist: user.myPlaylist||[], unreadNotifications: unread });
+  try {
+    const user = await User.findOne({ username: req.user.username });
+    if (!user) return res.status(404).json({ error: 'Lietotājs nav atrasts' });
+    
+    const unread = (user.notifications || []).filter(n => !n.read).length;
+    res.json({ 
+      username: user.username, 
+      role: user.role, 
+      bgUrl: user.bgUrl || '', 
+      favorites: user.favorites || [], 
+      myPlaylist: user.myPlaylist || [], 
+      unreadNotifications: unread 
+    });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
-// ── Change password ───────────────────────────────
+// --- CHANGE PASSWORD ---
 app.post('/api/change-password', requireAuth, async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body || {};
@@ -405,18 +453,28 @@ app.post('/api/change-password', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'Aizpildi abi paroles laukus' });
     if (newPassword.length < 6)
       return res.status(400).json({ error: 'Jaunā parole — min. 6 rakstzīmes' });
+
     const user = await User.findOne({ username: req.user.username });
     if (hashPwd(currentPassword, user.salt) !== user.passwordHash)
       return res.status(401).json({ error: 'Pašreizējā parole ir nepareiza' });
+
     const newSalt = crypto.randomBytes(32).toString('hex');
     user.passwordHash = hashPwd(newPassword, newSalt);
     user.salt = newSalt;
     await user.save();
-    // invalidate all other sessions
-    const curToken = req.headers['authorization'].replace('Bearer ','').trim();
+
+    const curToken = req.headers['authorization'].replace('Bearer ', '').trim();
     await Session.deleteMany({ username: req.user.username, token: { $ne: curToken } });
+    
     res.json({ ok: true, message: 'Parole mainīta veiksmīgi' });
-  } catch(e) { res.status(500).json({ error: e.message }); }
+  } catch(e) { 
+    res.status(500).json({ error: e.message }); 
+  }
+});
+
+// ŠIM JĀBŪT PAŠĀS BEIGĀS
+app.listen(process.env.PORT || 3000, () => {
+  console.log('Serveris griežas!');
 });
 
 // Admin: reset another user's password
