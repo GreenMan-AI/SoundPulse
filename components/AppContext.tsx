@@ -3,7 +3,7 @@ import { AppState } from 'react-native';
 import { Audio } from 'expo-av';
 import { translations, Lang } from '../i18n';
 
-export const API = 'https://greenman-ai.onrender.com';
+export const API = 'https://soundpulse-backend-e0e2.onrender.com';
 
 export interface NamedPlaylist { id: string; name: string; tracks: any[]; }
 
