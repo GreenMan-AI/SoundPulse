@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useState, useRef, useEffect } from 'react';
-import { AppState } from 'react-native';
 import { Audio } from 'expo-av';
 import { translations, Lang } from '../i18n';
 
@@ -36,6 +35,9 @@ interface AppContextType {
   uploadAvatar: (uri: string) => Promise<string | null>;
   uploadLimits: { remaining: number; maxSizeMB: number; maxDurationMin: number; } | null;
   fetchUploadLimits: () => Promise<void>;
+  ticker: string;
+  tickerActive: boolean;
+  loadTicker: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType>({} as AppContextType);
@@ -56,8 +58,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [banner, setBanner]         = useState('');
   const [profileData, setProfileData] = useState({ nick: '', avatarUrl: '', bio: '', mood: '' });
   const [uploadLimits, setUploadLimits] = useState<any>(null);
+  const [ticker, setTicker] = useState('');
+  const [tickerActive, setTickerActive] = useState(false);
 
   const t = translations[lang];
+
+  const loadTicker = async () => {
+    try {
+      const r = await fetch(`${API}/api/ticker`);
+      const d = await r.json();
+      setTicker(d.text || '');
+      setTickerActive(!!(d.text));
+    } catch {}
+  };
 
   // ── Audio fona atskaņošana — SVARĪGI lai mūzika turpina fonā! ──
   useEffect(() => {
@@ -234,6 +247,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       likes, toggleLike, banner, setBanner,
       profileData, saveProfile, uploadAvatar,
       uploadLimits, fetchUploadLimits,
+      ticker, tickerActive, loadTicker,
     }}>
       {children}
     </AppContext.Provider>
