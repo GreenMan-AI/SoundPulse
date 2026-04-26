@@ -190,7 +190,7 @@ const uploadAudio = multer({ storage: audioStorage, fileFilter: audioFilter, lim
 //  MONGODB
 // ══════════════════════════════════════════════════
 // Izmanto savu saiti ar +srv un GreenMan lietotāju
-const MONGODB_URI = "mongodb+srv://GreenMan:Draconball1@greenman.ijlx6sr.mongodb.net/SoundPulse?retryWrites=true&w=majority";
+const MONGO_URI = "mongodb+srv://GreenMan:Draconball1@greenman.ijlx6sr.mongodb.net/SoundPulse?retryWrites=true&w=majority";
 mongoose.connect(process.env.MONGO_URI)
   useNewUrlParser: true, 
   useUnifiedTopology: true 
