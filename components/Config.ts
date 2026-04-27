@@ -1,0 +1,1 @@
+export const API_URL = "https://soundpulse-backend-e0e2.onrender.com";
