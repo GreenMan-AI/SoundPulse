@@ -73,48 +73,76 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // ── Servera "uzmodināšana" — Render free tier guļ! ──
   useEffect(() => {
+    // Palīgfunkcija — fetch ar timeout (AbortController — jo AbortSignal.timeout nav RN atbalstīts)
+    const fetchWithTimeout = (url: string, ms = 20000) => {
+      const ctrl = new AbortController();
+      const id = setTimeout(() => ctrl.abort(), ms);
+      return fetch(url, { signal: ctrl.signal }).finally(() => clearTimeout(id));
+    };
+
+    let wakeAttempt = 0;
     const wakeUp = async () => {
       try {
-        const r = await fetch(`${API}/api/health`, { signal: AbortSignal.timeout(15000) });
+        wakeAttempt++;
+        const r = await fetchWithTimeout(`${API}/api/health`, 20000);
         const d = await r.json();
-        if (d.ok) setServerOnline(true);
+        if (d.ok) {
+          setServerOnline(true);
+        } else {
+          if (wakeAttempt < 10) setTimeout(wakeUp, 5000);
+        }
       } catch {
-        // Mēģina vēlreiz pēc 5s
-        setTimeout(wakeUp, 5000);
+        // Serveris vēl guļ — mēģina vēlreiz
+        if (wakeAttempt < 10) setTimeout(wakeUp, 5000);
       }
     };
     wakeUp();
-    // Keepalive — ping katras 10 minūtes lai serveris neguļ
+    // Keepalive — ping katras 8 minūtes lai serveris neguļ
     const keepAlive = setInterval(() => {
-      fetch(`${API}/api/health`).catch(() => {});
-    }, 10 * 60 * 1000);
+      fetchWithTimeout(`${API}/api/health`, 10000).catch(() => {});
+    }, 8 * 60 * 1000);
     return () => clearInterval(keepAlive);
   }, []);
 
   // ── Auth ──────────────────────────────────────────────
+  // ── Fetch ar timeout helper ──
+  const apiFetch = (url: string, opts: RequestInit = {}, ms = 15000): Promise<Response> => {
+    const ctrl = new AbortController();
+    const id = setTimeout(() => ctrl.abort(), ms);
+    return fetch(url, { ...opts, signal: ctrl.signal }).finally(() => clearTimeout(id));
+  };
+
   const login = async (u: string, p: string): Promise<string | null> => {
     try {
-      const res = await fetch(`${API}/api/login`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+      const res = await apiFetch(`${API}/api/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: u, password: p }),
       });
       const d = await res.json();
       if (d.token) {
         setUser({ username: d.username, role: d.role, isAdmin: d.role === 'admin' });
         setToken(d.token);
-        fetch(`${API}/api/ticker`).then(r => r.json()).then(d => { if (d.text) setBanner(d.text); }).catch(() => {});
+        apiFetch(`${API}/api/ticker`)
+          .then(r => r.json())
+          .then(d => { if (d.text) setBanner(d.text); })
+          .catch(() => {});
         loadProfile(d.username, d.token);
         return null;
       }
       return d.error || t.error;
-    } catch { return t.serverError; }
+    } catch (e: any) {
+      if (e?.name === 'AbortError') return 'Serveris nereaģē. Mēģini vēlreiz pēc 30s.';
+      return t.serverError;
+    }
   };
 
   const register = async (u: string, p: string): Promise<string | null> => {
     if (p.length < 6) return t.passMin;
     try {
-      const res = await fetch(`${API}/api/register`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+      const res = await apiFetch(`${API}/api/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: u, password: p }),
       });
       const d = await res.json();
@@ -124,7 +152,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         return null;
       }
       return d.error || t.error;
-    } catch { return t.serverError; }
+    } catch (e: any) {
+      if (e?.name === 'AbortError') return 'Serveris nereaģē. Mēģini vēlreiz pēc 30s.';
+      return t.serverError;
+    }
   };
 
   const logout = async () => {
