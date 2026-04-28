@@ -63,8 +63,16 @@ export default function AuthScreen() {
         <Text style={s.logo}>🎵 SoundPulse</Text>
         {!serverOnline && (
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 8 }}>
-            <ActivityIndicator size="small" color="#00cfff44" />
-            <Text style={{ color: '#00cfff66', fontSize: 11 }}>Serveris palaižas... (~30s)</Text>
+            <ActivityIndicator size="small" color="#00cfff88" />
+            <Text style={{ color: '#00cfff99', fontSize: 12 }}>
+              Serveris palaižas... (~30s)
+            </Text>
+          </View>
+        )}
+        {serverOnline && (
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginBottom: 8 }}>
+            <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#22c55e' }} />
+            <Text style={{ color: '#22c55e99', fontSize: 11 }}>Serveris gatavs</Text>
           </View>
         )}
         <Text style={s.sub}>{mode === 'login' ? t.welcomeBack : t.createAccount}</Text>
