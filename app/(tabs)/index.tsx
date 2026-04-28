@@ -3,6 +3,7 @@ import {
   TouchableOpacity, RefreshControl, Platform,
   ActivityIndicator, TextInput,
 } from 'react-native';
+import { useRouter } from 'expo-router'; // Pievienots routeris
 import { useState, useEffect, useMemo } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { useApp, API } from '../../components/AppContext';
@@ -17,13 +18,13 @@ type SortKey = 'default' | 'title' | 'artist' | 'plays';
 
 export default function HomeScreen() {
   const { tracks, setTracks, t, user } = useApp();
+  const router = useRouter(); // Inicializējam routeri
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading]       = useState(true);
   const [error, setError]           = useState('');
   const [search, setSearch]         = useState('');
   const [sort, setSort]             = useState<SortKey>('default');
 
-  // ── Ielādē dziesmas ──────────────────────────────────────
   const loadTracks = async () => {
     try {
       setError('');
@@ -47,7 +48,6 @@ export default function HomeScreen() {
     setRefreshing(false);
   };
 
-  // ── Meklēšana + kārtošana ────────────────────────────────
   const filtered = useMemo(() => {
     let list = [...tracks];
     if (search.trim()) {
@@ -61,32 +61,41 @@ export default function HomeScreen() {
       case 'title':  list.sort((a,b) => (a.title||'').localeCompare(b.title||'')); break;
       case 'artist': list.sort((a,b) => (a.artist||'').localeCompare(b.artist||'')); break;
       case 'plays':  list.sort((a,b) => (b.plays||0) - (a.plays||0)); break;
-      default: break; // default = servera secība (jaunākās pirmās)
+      default: break; 
     }
     return list;
   }, [tracks, search, sort]);
 
   const SORTS: [SortKey, string][] = [
-    ['default', '🆕 Jaunkājās'],
+    ['default', '🆕 Jaunākās'],
     ['plays',   '🔥 Populāri'],
     ['title',   '🔤 A–Z'],
     ['artist',  '🎤 Mākslinieks'],
   ];
 
-  // ── Render ───────────────────────────────────────────────
   return (
     <View style={s.container}>
-
       {/* ── Header ── */}
       <View style={s.header}>
         <View>
           <Text style={s.greeting}>👋 {user?.username || 'Viesis'}</Text>
           <Text style={s.logo}>SoundPulse</Text>
         </View>
+        
+        {/* Šeit parādīsies poga, ja esi ielogojies kā admins */}
+        {user?.isAdmin && (
+          <TouchableOpacity 
+            onPress={() => router.push('/admin')}
+            style={s.adminBtn}
+          >
+            <Ionicons name="add-circle" size={26} color="#00cfff" />
+          </TouchableOpacity>
+        )}
+        
         <Text style={s.count}>{tracks.length} {t.tracksCount}</Text>
       </View>
 
-      {/* ── Meklēšanas lauks ── */}
+      {/* ── Search ── */}
       <View style={s.searchWrap}>
         <Ionicons name="search" size={17} color="#555" style={{ marginRight: 8 }} />
         <TextInput
@@ -95,14 +104,7 @@ export default function HomeScreen() {
           placeholderTextColor="#444"
           value={search}
           onChangeText={setSearch}
-          returnKeyType="search"
-          clearButtonMode="while-editing"
         />
-        {search.length > 0 && (
-          <TouchableOpacity onPress={() => setSearch('')} hitSlop={{ top:8, bottom:8, left:8, right:8 }}>
-            <Ionicons name="close-circle" size={17} color="#555" />
-          </TouchableOpacity>
-        )}
       </View>
 
       {/* ── Sort chips ── */}
@@ -118,66 +120,41 @@ export default function HomeScreen() {
         ))}
       </View>
 
-      {/* ── Kļūdas paziņojums ── */}
+      {/* ── Error ── */}
       {!!error && (
         <View style={s.errorBox}>
-          <Ionicons name="wifi-outline" size={16} color="#ef4444" />
           <Text style={s.errorTxt}>{error}</Text>
           <TouchableOpacity onPress={loadTracks} style={s.retryBtn}>
-            <Text style={s.retryTxt}>↻ Mēģināt vēlreiz</Text>
+            <Text style={s.retryTxt}>↻</Text>
           </TouchableOpacity>
         </View>
       )}
 
-      {/* ── Dziesmu saraksts ── */}
+      {/* ── List ── */}
       <FlatList
         data={filtered}
         keyExtractor={(item: any) => item._id}
         contentContainerStyle={{ paddingHorizontal: 12, paddingBottom: 150 }}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor="#00cfff"
-            colors={['#00cfff']}
-          />
-        }
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#00cfff" />}
         renderItem={({ item, index }: any) => (
-          <TrackCard
-            track={item}
-            index={index}
-            accentColor={COLORS[index % COLORS.length]}
-            showAddBtn
-          />
+          <TrackCard track={item} index={index} accentColor={COLORS[index % COLORS.length]} showAddBtn />
         )}
         ListEmptyComponent={
           <View style={s.empty}>
             {loading ? (
-              <>
-                <ActivityIndicator size="large" color="#00cfff" />
-                <Text style={s.emptyTxt}>{t.loading}</Text>
-              </>
-            ) : !error ? (
+              <ActivityIndicator size="large" color="#00cfff" />
+            ) : (
               <>
                 <Ionicons name="musical-notes-outline" size={60} color="#222" />
-                <Text style={s.emptyTxt}>
-                  {search ? (t.noResults || 'Nav rezultātu') : t.noTracks}
-                </Text>
-                {!search && (
-                  <Text style={s.emptySub}>Admins vēl nav pievienojis dziesmas</Text>
+                <Text style={s.emptyTxt}>{t.noTracks}</Text>
+                {user?.isAdmin && (
+                   <TouchableOpacity onPress={() => router.push('/admin')} style={s.bigAdminBtn}>
+                      <Text style={s.bigAdminBtnTxt}>➕ PIEVIENOT DZIESMAS</Text>
+                   </TouchableOpacity>
                 )}
               </>
-            ) : null}
+            )}
           </View>
-        }
-        ListHeaderComponent={
-          filtered.length > 0 ? (
-            <Text style={s.resultCount}>
-              {search
-                ? `${filtered.length} rezultāti`
-                : `${filtered.length} ${t.tracksCount}`}
-            </Text>
-          ) : null
         }
       />
     </View>
@@ -186,7 +163,6 @@ export default function HomeScreen() {
 
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0a0a0f' },
-
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -199,7 +175,7 @@ const s = StyleSheet.create({
   greeting: { color: '#555', fontSize: 12 },
   logo:     { fontSize: 24, fontWeight: '900', color: '#00cfff', marginTop: 2 },
   count:    { color: '#333', fontSize: 12, paddingBottom: 2 },
-
+  adminBtn: { padding: 5, marginBottom: -5 },
   searchWrap: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -214,51 +190,17 @@ const s = StyleSheet.create({
     borderColor: '#1e1e2a',
   },
   searchInput: { flex: 1, color: '#fff', fontSize: 14 },
-
-  sortRow: {
-    flexDirection: 'row',
-    paddingHorizontal: 12,
-    paddingBottom: 8,
-    gap: 6,
-  },
-  sortChip: {
-    paddingHorizontal: 11,
-    paddingVertical: 5,
-    borderRadius: 20,
-    backgroundColor: '#111118',
-    borderWidth: 1,
-    borderColor: '#1e1e2a',
-  },
-  sortChipActive: {
-    backgroundColor: '#00cfff22',
-    borderColor: '#00cfff55',
-  },
+  sortRow: { flexDirection: 'row', paddingHorizontal: 12, paddingBottom: 8, gap: 6 },
+  sortChip: { paddingHorizontal: 11, paddingVertical: 5, borderRadius: 20, backgroundColor: '#111118', borderWidth: 1, borderColor: '#1e1e2a' },
+  sortChipActive: { backgroundColor: '#00cfff22', borderColor: '#00cfff55' },
   sortTxt:       { color: '#444', fontSize: 11, fontWeight: '600' },
   sortTxtActive: { color: '#00cfff' },
-
-  errorBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    backgroundColor: '#1a0a0a',
-    margin: 12,
-    borderRadius: 12,
-    padding: 12,
-    gap: 8,
-    borderWidth: 1,
-    borderColor: '#ef444433',
-  },
+  errorBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#1a0a0a', margin: 12, borderRadius: 12, padding: 12, gap: 8 },
   errorTxt:  { color: '#ef4444', fontSize: 12, flex: 1 },
-  retryBtn:  { backgroundColor: '#ef444422', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5 },
-  retryTxt:  { color: '#ef4444', fontSize: 12, fontWeight: '700' },
-
-  resultCount: {
-    color: '#333',
-    fontSize: 11,
-    paddingHorizontal: 4,
-    paddingBottom: 4,
-  },
+  retryBtn:  { backgroundColor: '#ef444422', borderRadius: 8, padding: 5 },
+  retryTxt:  { color: '#ef4444', fontWeight: 'bold' },
   empty:    { alignItems: 'center', marginTop: 80, gap: 12 },
   emptyTxt: { color: '#444', fontSize: 15 },
-  emptySub: { color: '#333', fontSize: 12 },
+  bigAdminBtn: { backgroundColor: '#00cfff', padding: 15, borderRadius: 12, marginTop: 10 },
+  bigAdminBtnTxt: { color: '#000', fontWeight: 'bold' }
 });
