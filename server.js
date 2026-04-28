@@ -1339,7 +1339,8 @@ self.addEventListener('fetch',e=>{const u=new URL(e.request.url);if(u.pathname.s
 });
 
 // SPA catch-all — atgriež index.html visiem non-API pieprasījumiem
-app.get('*', (req, res) => {
+app.get('/:any*', (req, res) => {
+    // Šeit :any kalpo kā parametra nosaukums
   const idx = path.join(__dirname, 'public', 'index.html');
   if (fs.existsSync(idx)) {
     res.sendFile(idx);
