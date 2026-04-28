@@ -42,13 +42,15 @@ const _cssSrc  = path.join(__dirname, 'design.css');
 const _cssDest = path.join(__dirname, 'public', 'design.css');
 if (fs.existsSync(_cssSrc)) fs.copyFileSync(_cssSrc, _cssDest);
 
+const _bgSrc  = path.join(__dirname, 'bg.jpg');
+const _bgDest = path.join(__dirname, 'public', 'bg.jpg');
+if (fs.existsSync(_bgSrc)) fs.copyFileSync(_bgSrc, _bgDest);
+
 // ── CORS ──────────────────────────────────────────────
 app.use((req, res, next) => {
-
   const origin = req.headers.origin || '';
-  
   const allowed = [
-    'https://soundpulse-backend-e0e2.onrender.com',
+    'https://greenman-ai.onrender.com',
     'http://localhost:3000',
     'http://localhost:8081',
     'http://192.168.1',
@@ -57,8 +59,12 @@ app.use((req, res, next) => {
   const isAllowed = !origin ||
     allowed.some(a => origin.startsWith(a)) ||
     origin.startsWith('exp://') ||
-    origin.match(/^http:\/\/192\.168\./);
-  res.setHeader('Access-Control-Allow-Origin', isAllowed ? (origin || '*') : 'https://soundpulse-backend-e0e2.onrender.com');
+    origin.startsWith('expo://') ||
+    origin.match(/^http:\/\/192\.168\./) ||
+    origin.match(/^http:\/\/10\./) ||
+    origin.match(/^http:\/\/172\./);
+  // React Native production builds don't send Origin header - always allow
+  res.setHeader('Access-Control-Allow-Origin', origin || '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
   res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -67,7 +73,7 @@ app.use((req, res, next) => {
 });
 
 // ── Static files — PIRMS maršrutiem ──────────────────
-app.use(express.static(path.join(__dirname, 'app', 'tabs')))
+app.use(express.static('public', { maxAge: '1d' }));
 
 // ══════════════════════════════════════════════════
 //  SECURITY HEADERS
@@ -86,7 +92,7 @@ app.use((req, res, next) => {
     "font-src 'self' https://fonts.gstatic.com data:; " +
     "img-src 'self' data: blob: https:; " +
     "media-src 'self' blob: https: https://*.cloudinary.com https://res.cloudinary.com; " +
-    "connect-src 'self' https://*.cloudinary.com https://api.cloudinary.com https://res.cloudinary.com export const API = 'https://soundpulse-backend-e0e2.onrender.com'; " +
+    "connect-src 'self' https://*.cloudinary.com https://api.cloudinary.com https://res.cloudinary.com https://greenman-ai.onrender.com; " +
     "worker-src 'self' blob:; " +
     "frame-ancestors 'none';"
   );
@@ -132,7 +138,7 @@ const audioStorage = new CloudinaryStorage({
   cloudinary,
   params: async (req, file) => ({
     folder:        'SoundPulse/audio',
-    resource_type: 'audio',
+    resource_type: 'video',
     public_id:     'track_' + Date.now() + '_' + crypto.randomBytes(6).toString('hex'),
   }),
 });
@@ -187,11 +193,14 @@ const uploadAudio = multer({ storage: audioStorage, fileFilter: audioFilter, lim
 // ══════════════════════════════════════════════════
 //  MONGODB
 // ══════════════════════════════════════════════════
-// Izmanto savu saiti ar +srv un GreenMan lietotāju
-
-mongoose.connect(process.env.MONGODB_URI)
-  .then(() => console.log("✅ MongoDB savienojums veiksmīgs!"))
-  .catch(err => console.error("❌ MongoDB kļūda:", err));
+const MONGO_URI = process.env.MONGODB_URI || process.env.MONGO_URI;
+if (!MONGO_URI) {
+  console.error('❌ KĻŪDA: MONGODB_URI nav iestatīts Render.com Environment Variables!');
+  console.error('   Pievieno: MONGODB_URI = mongodb+srv://GreenMan:ManaJaunaParole2026@greenman.ijlx6sr.mongodb.net/SoundPulse?retryWrites=true&w=majority');
+}
+mongoose.connect(MONGO_URI || 'mongodb+srv://GreenMan:ManaJaunaParole2026@greenman.ijlx6sr.mongodb.net/SoundPulse?retryWrites=true&w=majority')
+  .then(() => console.log('✅ MongoDB savienots!'))
+  .catch(e => { console.error('❌ MongoDB kļūda:', e.message); /* nav process.exit — serveris turpina */ });
 
 // ── Schemas ──────────────────────────────────────
 const UserSchema = new mongoose.Schema({
@@ -324,7 +333,7 @@ function requireAdmin(req, res, next) {
 
 async function seedAdmin() {
   const u = process.env.ADMIN_USER || 'admin';
-  const p = process.env.ADMIN_PASS || 'Draconball1';
+  const p = process.env.ADMIN_PASS || 'admin123';
   if (!await User.findOne({ username: u })) {
     const salt = crypto.randomBytes(32).toString('hex');
     await User.create({ username: u, passwordHash: hashPwd(p, salt), salt, role: 'admin' });
@@ -375,81 +384,33 @@ app.post('/api/register', authLimiter, async (req, res) => {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
-// --- LOGIN MARŠRUTS ---
 app.post('/api/login', authLimiter, async (req, res) => {
   try {
     const { username, password } = req.body || {};
-    
-    if (!username?.trim() || !password) {
+    if (!username?.trim() || !password)
       return res.status(400).json({ error: 'Aizpildi abi laukus' });
-    }
-
     const user = await User.findOne({ username: username.trim() });
-
-    // --- VIENREIZĒJA ADMIN PAAUGSTINĀŠANA ---
-    // Nomaini 'TAVS_VĀRDS' uz savu lietotājvārdu, lai kļūtu par adminu
-    if (user && user.username === 'admin') { 
-      user.role = 'admin'; 
-      await user.save(); 
-    }
-
-    if (!user || hashPwd(password, user.salt) !== user.passwordHash) {
-      console.log(`❌ Login kļūda lietotājam: ${username}`); 
+    if (!user || hashPwd(password, user.salt) !== user.passwordHash)
       return res.status(401).json({ error: 'Nepareizs lietotājvārds vai parole' });
-    }
-
     const token = makeToken();
     await Session.create({ token, username: user.username });
-
-    console.log(`✅ Veiksmīgs login: ${user.username} (${user.role})`);
-    res.json({ 
-      token, 
-      username: user.username, 
-      role: user.role, 
-      bgUrl: user.bgUrl || '' 
-    });
-
-  } catch(e) { 
-    console.error("Servera kļūda login laikā:", e);
-    res.status(500).json({ error: e.message }); 
-  }
+    res.json({ token, username: user.username, role: user.role, bgUrl: user.bgUrl || '' });
+  } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
-// --- LOGOUT MARŠRUTS (Izlabota sintakse) ---
 app.post('/api/logout', requireAuth, async (req, res) => {
-  try {
-    const authHeader = req.headers['authorization'];
-    if (!authHeader) return res.status(401).json({ error: 'Nav marķiera' });
-    
-    const token = authHeader.replace('Bearer ', '').trim();
-    await Session.deleteOne({ token });
-    res.json({ ok: true });
-  } catch(e) {
-    res.status(500).json({ error: e.message });
-  }
+  const token = req.headers['authorization'].replace('Bearer ','').trim();
+  await Session.deleteOne({ token });
+  res.json({ ok: true });
 });
 
-// --- ME (Lietotāja dati) ---
 app.get('/api/me', requireAuth, async (req, res) => {
-  try {
-    const user = await User.findOne({ username: req.user.username });
-    if (!user) return res.status(404).json({ error: 'Lietotājs nav atrasts' });
-    
-    const unread = (user.notifications || []).filter(n => !n.read).length;
-    res.json({ 
-      username: user.username, 
-      role: user.role, 
-      bgUrl: user.bgUrl || '', 
-      favorites: user.favorites || [], 
-      myPlaylist: user.myPlaylist || [], 
-      unreadNotifications: unread 
-    });
-  } catch(e) {
-    res.status(500).json({ error: e.message });
-  }
+  const user = await User.findOne({ username: req.user.username });
+  const unread = (user.notifications||[]).filter(n=>!n.read).length;
+  res.json({ username: user.username, role: user.role, bgUrl: user.bgUrl||'', favorites: user.favorites||[], myPlaylist: user.myPlaylist||[], unreadNotifications: unread });
 });
 
-// --- CHANGE PASSWORD ---
+// ── Change password ───────────────────────────────
 app.post('/api/change-password', requireAuth, async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body || {};
@@ -457,23 +418,18 @@ app.post('/api/change-password', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'Aizpildi abi paroles laukus' });
     if (newPassword.length < 6)
       return res.status(400).json({ error: 'Jaunā parole — min. 6 rakstzīmes' });
-
     const user = await User.findOne({ username: req.user.username });
     if (hashPwd(currentPassword, user.salt) !== user.passwordHash)
       return res.status(401).json({ error: 'Pašreizējā parole ir nepareiza' });
-
     const newSalt = crypto.randomBytes(32).toString('hex');
     user.passwordHash = hashPwd(newPassword, newSalt);
     user.salt = newSalt;
     await user.save();
-
-    const curToken = req.headers['authorization'].replace('Bearer ', '').trim();
+    // invalidate all other sessions
+    const curToken = req.headers['authorization'].replace('Bearer ','').trim();
     await Session.deleteMany({ username: req.user.username, token: { $ne: curToken } });
-    
     res.json({ ok: true, message: 'Parole mainīta veiksmīgi' });
-  } catch(e) { 
-    res.status(500).json({ error: e.message }); 
-  }
+  } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
 // Admin: reset another user's password
@@ -493,11 +449,6 @@ app.post('/api/admin/reset-password', requireAuth, requireAdmin, async (req, res
     await Session.deleteMany({ username });
     res.json({ ok: true, message: `Parole atiestatīta lietotājam ${username}` });
   } catch(e) { res.status(500).json({ error: e.message }); }
-});
-
-// ŠIM JĀBŪT PAŠĀS BEIGĀS
-server.listen(process.env.PORT || 3000, () => {
-  console.log("Serveris griežas!");
 });
 
 // ══════════════════════════════════════════════════
@@ -1345,7 +1296,18 @@ app.post('/api/ticker', requireAuth, requireAdmin, async (req, res) => {
 });
 
 
-app.get('/api/health', (req, res) => res.json({ ok:true, time:new Date().toISOString() }));
+app.get('/api/health', (req, res) => {
+  const dbState = mongoose.connection.readyState;
+  // 0=disconnected, 1=connected, 2=connecting, 3=disconnecting
+  const dbOk = dbState === 1;
+  res.json({
+    ok: dbOk,
+    db: dbOk ? 'connected' : 'disconnected',
+    dbState,
+    time: new Date().toISOString(),
+    uptime: Math.floor(process.uptime()),
+  });
+});
 
 // PWA files
 app.get('/manifest.json', (req, res) => {
@@ -1377,17 +1339,15 @@ self.addEventListener('fetch',e=>{const u=new URL(e.request.url);if(u.pathname.s
 });
 
 // SPA catch-all — atgriež index.html visiem non-API pieprasījumiem
-app.get(/^(?!\/api).+/, (req, res) => {
-  // Šeit mēs norādām precīzu ceļu līdz index.html
-  const idx = path.join(__dirname, 'app', 'tabs', 'index.html');
-  
+app.get('*', (req, res) => {
+  const idx = path.join(__dirname, 'public', 'index.html');
   if (fs.existsSync(idx)) {
     res.sendFile(idx);
   } else {
-    // Ja nu tomēr kaut kas noiet greizi, šis paziņojums tev precīzi pateiks, kur ir kļūda
-    res.status(404).send('Kļūda: index.html nav atrasts mapē app/tabs/');
+    res.status(404).send('index.html nav atrasts public/ mapē');
   }
 });
+
 mongoose.connection.once('open', async () => {
   await seedAdmin();
   server.listen(PORT, () => console.log(`
