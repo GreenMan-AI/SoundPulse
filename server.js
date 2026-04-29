@@ -1341,29 +1341,35 @@ self.addEventListener('fetch',e=>{const u=new URL(e.request.url);if(u.pathname.s
   res.send(sw);
 });
 
-/ SPA catch-all — IZLABOTS priekš jaunākajām Express versijām
+// --- GALĪGAIS LABOJUMS ---
+
+// 1. SPA catch-all — noķer visus pieprasījumus bez kļūdām
 app.get('(.*)', (req, res) => {
-  const idx = path.join(__dirname, 'public', 'index.html');
+  const publicIdx = path.join(__dirname, 'public', 'index.html');
   const rootIdx = path.join(__dirname, 'index.html');
 
-  if (fs.existsSync(idx)) {
-    res.sendFile(idx);
+  if (fs.existsSync(publicIdx)) {
+    return res.sendFile(publicIdx);
   } else if (fs.existsSync(rootIdx)) {
-    res.sendFile(rootIdx);
+    return res.sendFile(rootIdx);
   } else {
-    res.status(404).send('Kļūda: index.html nav atrasts ne public/, ne saknes mapē.');
+    return res.status(404).send('Kļūda: index.html nav atrasts.');
   }
 });
 
-// Servera palaišana pēc MongoDB savienojuma
+// Servera palaišana ar aizsardzību pret kļūdām
 mongoose.connection.once('open', async () => {
   try {
+    // Izpildām admin izveidi tikai vienreiz
     if (typeof seedAdmin === 'function') {
       await seedAdmin();
     }
-    server.listen(PORT, () => console.log(`🚀 Serveris gatavs portā ${PORT}`));
+    // Palaižam serveri
+    server.listen(PORT, () => {
+      console.log(`🚀 Serveris ir ONLINE portā ${PORT}`);
+    });
   } catch (err) {
-    console.error("Servera palaišanas kļūda:", err);
+    console.error("Kritiska kļūda startējot serveri:", err);
   }
 });
 
