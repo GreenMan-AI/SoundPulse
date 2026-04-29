@@ -1341,9 +1341,13 @@ self.addEventListener('fetch',e=>{const u=new URL(e.request.url);if(u.pathname.s
   res.send(sw);
 });
 
-// 1. SPA catch-all — noķer visus pieprasījumus bez kļūdām
+// 1. DROŠS veids, kā noķert visus pārējos pieprasījumus (bez maršruta simboliem)
+app.use((req, res, next) => {
+  // Ja pieprasījums sākas ar /api, tad ejam tālāk un nemēģinām sūtīt index.html
+  if (req.path.startsWith('/api')) {
+    return next();
+  }
 
-app.get('(.*)', (req, res) => {
   const publicIdx = path.join(__dirname, 'public', 'index.html');
   const rootIdx = path.join(__dirname, 'index.html');
 
@@ -1352,21 +1356,17 @@ app.get('(.*)', (req, res) => {
   } else if (fs.existsSync(rootIdx)) {
     return res.sendFile(rootIdx);
   } else {
-    return res.status(404).send('Kļūda: index.html nav atrasts.');
+    return res.status(404).send('Serveris darbojas, bet lapa nav atrasta.');
   }
 });
 
-// 2. Servera palaišana ar aizsardzību pret kļūdām
-
+// 2. Servera palaišana pēc MongoDB savienojuma
 mongoose.connection.once('open', async () => {
   try {
-    // Izpildām admin izveidi tikai vienreiz
-    
     if (typeof seedAdmin === 'function') {
       await seedAdmin();
     }
-    // Palaižam serveri TIKAI vienu reizi
-    
+    // Pārliecinies, ka PORT mainīgais ir definēts faila sākumā
     server.listen(PORT, () => {
       console.log(`🚀 Serveris ir ONLINE portā ${PORT}`);
     });
