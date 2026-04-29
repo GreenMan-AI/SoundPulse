@@ -1341,9 +1341,8 @@ self.addEventListener('fetch',e=>{const u=new URL(e.request.url);if(u.pathname.s
   res.send(sw);
 });
 
-// 1. DROŠS veids, kā noķert visus pārējos pieprasījumus (bez maršruta simboliem)
+// 1. DROŠS veids, kā noķert visus pārējos pieprasījumus
 app.use((req, res, next) => {
-  // Ja pieprasījums sākas ar /api, tad ejam tālāk un nemēģinām sūtīt index.html
   if (req.path.startsWith('/api')) {
     return next();
   }
@@ -1356,31 +1355,28 @@ app.use((req, res, next) => {
   } else if (fs.existsSync(rootIdx)) {
     return res.sendFile(rootIdx);
   } else {
-    return res.status(404).send('Serveris darbojas, bet lapa nav atrasta.');
+    return res.status(404).send('SoundPulse serveris ir tiešsaistē, bet index.html trūkst.');
   }
 });
 
-// 2. Servera palaišana pēc MongoDB savienojuma
+// 2. VIENREIZĒJA servera palaišana pēc MongoDB savienojuma
 mongoose.connection.once('open', async () => {
   try {
+    // Admin izveide
     if (typeof seedAdmin === 'function') {
       await seedAdmin();
     }
-    // Pārliecinies, ka PORT mainīgais ir definēts faila sākumā
+    
+    // Servera palaišana TIKAI ŠEIT
     server.listen(PORT, () => {
-      console.log(`🚀 Serveris ir ONLINE portā ${PORT}`);
+      console.log(`
+╔═══════════════════════════════════════════════════════════╗
+║          SoundPulse v3.0 — GATAVS DARBAM                  ║
+║   Serveris ir ONLINE portā: ${PORT.toString().padEnd(26)} ║
+╚═══════════════════════════════════════════════════════════╝
+      `);
     });
   } catch (err) {
     console.error("Kritiska kļūda startējot serveri:", err);
   }
-});
-
-mongoose.connection.once('open', async () => {
-  await seedAdmin();
-  server.listen(PORT, () => console.log(`
-╔═══════════════════════════════════════════╗
-║  SoundPulse v3.0  —  Full Edition    ║
-║  i18n + Trending + Feed + Ads + Profiles  ║
-║  http://localhost:${PORT}                     ║
-╚═══════════════════════════════════════════╝`));
 });
