@@ -1341,28 +1341,30 @@ self.addEventListener('fetch',e=>{const u=new URL(e.request.url);if(u.pathname.s
   res.send(sw);
 });
 
-// SPA catch-all — IZLABOTS priekš jaunākajām Express versijām
+/ SPA catch-all — IZLABOTS priekš jaunākajām Express versijām
 app.get('(.*)', (req, res) => {
   const idx = path.join(__dirname, 'public', 'index.html');
+  const rootIdx = path.join(__dirname, 'index.html');
+
   if (fs.existsSync(idx)) {
     res.sendFile(idx);
+  } else if (fs.existsSync(rootIdx)) {
+    res.sendFile(rootIdx);
   } else {
-    // Ja index.html nav public mapē, mēģinām sūtīt no saknes mapes
-    const rootIdx = path.join(__dirname, 'index.html');
-    if (fs.existsSync(rootIdx)) {
-      res.sendFile(rootIdx);
-    } else {
-      res.status(404).send('Kļūda: index.html nav atrasts ne public/, ne saknes mapē.');
-    }
+    res.status(404).send('Kļūda: index.html nav atrasts ne public/, ne saknes mapē.');
   }
 });
 
 // Servera palaišana pēc MongoDB savienojuma
 mongoose.connection.once('open', async () => {
-  if (typeof seedAdmin === 'function') {
-    await seedAdmin();
+  try {
+    if (typeof seedAdmin === 'function') {
+      await seedAdmin();
+    }
+    server.listen(PORT, () => console.log(`🚀 Serveris gatavs portā ${PORT}`));
+  } catch (err) {
+    console.error("Servera palaišanas kļūda:", err);
   }
-  server.listen(PORT, () => console.log(`🚀 Serveris gatavs portā ${PORT}`));
 });
 
 mongoose.connection.once('open', async () => {
