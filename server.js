@@ -1,6 +1,6 @@
 require('dotenv').config();
 const express    = require('express');
-const http       = require("http");
+const http       = require('http');
 const { Server } = require('socket.io');
 const multer     = require('multer');
 const path       = require('path');
@@ -9,7 +9,6 @@ const crypto     = require('crypto');
 const mongoose   = require('mongoose');
 const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
-const cors = require('cors');
 
 const app    = express();
 const server = http.createServer(app);
@@ -47,8 +46,6 @@ const _bgSrc  = path.join(__dirname, 'bg.jpg');
 const _bgDest = path.join(__dirname, 'public', 'bg.jpg');
 if (fs.existsSync(_bgSrc)) fs.copyFileSync(_bgSrc, _bgDest);
 
-// ── CORS — npm cors pakotne + manuālie headeri ──
-app.use(cors({ origin: true, credentials: true }));
 // ── CORS ──────────────────────────────────────────────
 app.use((req, res, next) => {
   const origin = req.headers.origin || '';
@@ -95,7 +92,11 @@ app.use((req, res, next) => {
     "font-src 'self' https://fonts.gstatic.com data:; " +
     "img-src 'self' data: blob: https:; " +
     "media-src 'self' blob: https: https://*.cloudinary.com https://res.cloudinary.com; " +
-    "connect-src 'self' https://*.cloudinary.com https://api.cloudinary.com https://res.cloudinary.com 'https://soundpulse-oe3r.onrender.com/api'; +
+    
+    "connect-src 'self' https://*.cloudinary.com https://api.cloudinary.com https://res.cloudinary.com 'https://soundpulse-oe3r.onrender.com/api'" +
+
+    "connect-src 'self' https://*.cloudinary.com https://api.cloudinary.com https://res.cloudinary.com https://soundpulse-oe3r.onrender.com/api; " +
+    
     "worker-src 'self' blob:; " +
     "frame-ancestors 'none';"
   );
@@ -1373,10 +1374,13 @@ mongoose.connection.once('open', async () => {
 ╔═══════════════════════════════════════════════════════════╗
 ║          SoundPulse v3.0 — GATAVS DARBAM                  ║
 ║   Serveris ir ONLINE portā: ${PORT.toString().padEnd(26)} ║
+
+║   Serveris ir ONLINE portā: ${PORT.toString().padEnd(26)} ║
 ╚═══════════════════════════════════════════════════════════╝
       `);
     });
   } catch (err) {
     console.error("Kritiska kļūda startējot serveri:", err);
   }
+
 });
