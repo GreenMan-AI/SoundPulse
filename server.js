@@ -1342,13 +1342,24 @@ self.addEventListener('fetch',e=>{const u=new URL(e.request.url);if(u.pathname.s
 });
 
 // SPA catch-all — atgriež index.html visiem non-API pieprasījumiem
-app.all('*', (req, res) => {
+app.get('*', (req, res) => {
   const idx = path.join(__dirname, 'public', 'index.html');
   if (fs.existsSync(idx)) {
     res.sendFile(idx);
   } else {
-    res.status(404).send('index.html nav atrasts public/ mapē');
+    // Ja index.html nav public mapē, mēģinām sūtīt no saknes mapes
+    const rootIdx = path.join(__dirname, 'index.html');
+    if (fs.existsSync(rootIdx)) {
+      res.sendFile(rootIdx);
+    } else {
+      res.status(404).send('Kļūda: index.html nav atrasts ne public/, ne saknes mapē.');
+    }
   }
+});
+
+mongoose.connection.once('open', async () => {
+  await seedAdmin();
+  server.listen(PORT, () => console.log(`🚀 Serveris gatavs portā ${PORT}`));
 });
 
 mongoose.connection.once('open', async () => {
