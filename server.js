@@ -1,6 +1,6 @@
 require('dotenv').config();
 const express    = require('express');
-const http       = require('http');
+const http       = require("http");
 const { Server } = require('socket.io');
 const multer     = require('multer');
 const path       = require('path');
@@ -9,6 +9,7 @@ const crypto     = require('crypto');
 const mongoose   = require('mongoose');
 const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
+const cors = require('cors');
 
 const app    = express();
 const server = http.createServer(app);
@@ -46,6 +47,8 @@ const _bgSrc  = path.join(__dirname, 'bg.jpg');
 const _bgDest = path.join(__dirname, 'public', 'bg.jpg');
 if (fs.existsSync(_bgSrc)) fs.copyFileSync(_bgSrc, _bgDest);
 
+// ── CORS — npm cors pakotne + manuālie headeri ──
+app.use(cors({ origin: true, credentials: true }));
 // ── CORS ──────────────────────────────────────────────
 app.use((req, res, next) => {
   const origin = req.headers.origin || '';
@@ -1339,8 +1342,7 @@ self.addEventListener('fetch',e=>{const u=new URL(e.request.url);if(u.pathname.s
 });
 
 // SPA catch-all — atgriež index.html visiem non-API pieprasījumiem
-app.get('/:any*', (req, res) => {
-    // Šeit :any kalpo kā parametra nosaukums
+app.all('*', (req, res) => {
   const idx = path.join(__dirname, 'public', 'index.html');
   if (fs.existsSync(idx)) {
     res.sendFile(idx);
