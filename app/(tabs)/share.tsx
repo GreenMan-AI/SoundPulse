@@ -8,7 +8,7 @@ import { useApp } from '../../components/AppContext';
 const { width: SW } = Dimensions.get('window');
 const APP_URL = 'https://expo.dev/accounts/greenman/projects/SoundPulse';
 const DOWNLOAD_URL = 'https://github.com/GreenMan-AI/greenman-ai/releases/latest/download/SoundPulse.apk';
-const SERVER_URL = 'https://soundpulse-backend-e0e2.onrender.com/';
+const SERVER_URL = 'https://soundpulse-oe3r.onrender.com/api';
 
 // QR kods — izmanto qrserver.com API lai ģenerētu īstu QR
 function RealQR({ value, size = 200, color = '00cfff' }: { value: string; size?: number; color?: string }) {
