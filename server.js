@@ -1341,8 +1341,6 @@ self.addEventListener('fetch',e=>{const u=new URL(e.request.url);if(u.pathname.s
   res.send(sw);
 });
 
-// --- GALĪGAIS LABOJUMS ---
-
 // 1. SPA catch-all — noķer visus pieprasījumus bez kļūdām
 app.get('(.*)', (req, res) => {
   const publicIdx = path.join(__dirname, 'public', 'index.html');
@@ -1357,14 +1355,14 @@ app.get('(.*)', (req, res) => {
   }
 });
 
-// Servera palaišana ar aizsardzību pret kļūdām
+// 2. Servera palaišana ar aizsardzību pret kļūdām
 mongoose.connection.once('open', async () => {
   try {
     // Izpildām admin izveidi tikai vienreiz
     if (typeof seedAdmin === 'function') {
       await seedAdmin();
     }
-    // Palaižam serveri
+    // Palaižam serveri TIKAI vienu reizi
     server.listen(PORT, () => {
       console.log(`🚀 Serveris ir ONLINE portā ${PORT}`);
     });
