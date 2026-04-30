@@ -1345,7 +1345,12 @@ self.addEventListener('fetch',e=>{const u=new URL(e.request.url);if(u.pathname.s
   res.send(sw);
 });
 
-// Ja kāds atver galveno lapu (https://soundpulse-oe3r.onrender.com/api)
+// 1. DROŠS veids, kā noķert visus pieprasījumus
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api')) {
+    return next();
+  }
+
   if (req.path === '/') {
     return res.status(200).send(`
       <div style="text-align: center; font-family: sans-serif; padding-top: 50px;">
@@ -1382,8 +1387,7 @@ mongoose.connection.once('open', async () => {
 ╔═══════════════════════════════════════════════════════════╗
 ║          SoundPulse v3.0 — GATAVS DARBAM                  ║
 ║   Serveris ir ONLINE portā: ${PORT.toString().padEnd(26)} ║
-
-║   Serveris ir ONLINE portā: ${PORT.toString().padEnd(26)} ║
+║                                                           ║
 ╚═══════════════════════════════════════════════════════════╝
       `);
     });
