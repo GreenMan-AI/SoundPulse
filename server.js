@@ -1,6 +1,5 @@
 require('dotenv').config();
 const express    = require('express');
-const http       = require("http");
 const http       = require('http');
 const { Server } = require('socket.io');
 const multer     = require('multer');
@@ -11,11 +10,14 @@ const mongoose   = require('mongoose');
 const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const cors = require('cors');
-
 const app    = express();
 const server = http.createServer(app);
 const io     = new Server(server, { cors: { origin: '*', credentials: true } });
 const PORT   = process.env.PORT || 3000;
+app.use(cors()); 
+app.use(express.json()); 
+app.use(express.urlencoded({ extended: true }));
+const server = http.createServer(app);
 
 // ── Socket.IO — reāllaika čats ──
 const chatHistory = [];
@@ -48,8 +50,6 @@ const _bgSrc  = path.join(__dirname, 'bg.jpg');
 const _bgDest = path.join(__dirname, 'public', 'bg.jpg');
 if (fs.existsSync(_bgSrc)) fs.copyFileSync(_bgSrc, _bgDest);
 
-// ── CORS — npm cors pakotne + manuālie headeri ──
-app.use(cors({ origin: true, credentials: true }));
 // ── CORS ──────────────────────────────────────────────
 app.use((req, res, next) => {
   const origin = req.headers.origin || '';
@@ -96,7 +96,6 @@ app.use((req, res, next) => {
     "font-src 'self' https://fonts.gstatic.com data:; " +
     "img-src 'self' data: blob: https:; " +
     "media-src 'self' blob: https: https://*.cloudinary.com https://res.cloudinary.com; " +
-    "connect-src 'self' https://*.cloudinary.com https://api.cloudinary.com https://res.cloudinary.com 'https://soundpulse-oe3r.onrender.com/api'; +
     
     "connect-src 'self' https://*.cloudinary.com https://api.cloudinary.com https://res.cloudinary.com 'https://soundpulse-oe3r.onrender.com/api'" +
 
@@ -1347,10 +1346,16 @@ self.addEventListener('fetch',e=>{const u=new URL(e.request.url);if(u.pathname.s
   res.send(sw);
 });
 
-// 1. DROŠS veids, kā noķert visus pārējos pieprasījumus
-app.use((req, res, next) => {
-  if (req.path.startsWith('/api')) {
-    return next();
+// Ja kāds atver galveno lapu (https://soundpulse-oe3r.onrender.com/)
+  if (req.path === '/') {
+    return res.status(200).send(`
+      <div style="text-align: center; font-family: sans-serif; padding-top: 50px;">
+        <h1>SoundPulse API v3.0</h1>
+        <p style="color: green;">● Serveris ir tiešsaistē un savienots ar MongoDB</p>
+        <hr style="width: 200px;">
+        <p>Gatavs savienojumam ar mobilo aplikāciju.</p>
+      </div>
+    `);
   }
 
   const publicIdx = path.join(__dirname, 'public', 'index.html');
@@ -1363,7 +1368,6 @@ app.use((req, res, next) => {
   } else {
     return res.status(404).send('SoundPulse serveris ir tiešsaistē, bet index.html trūkst.');
   }
-});
 
 // 2. VIENREIZĒJA servera palaišana pēc MongoDB savienojuma
 mongoose.connection.once('open', async () => {
