@@ -1345,7 +1345,7 @@ self.addEventListener('fetch',e=>{const u=new URL(e.request.url);if(u.pathname.s
   res.send(sw);
 });
 
-// Ja kāds atver galveno lapu (https://soundpulse-oe3r.onrender.com/)
+// Ja kāds atver galveno lapu (https://soundpulse-oe3r.onrender.com/api)
   if (req.path === '/') {
     return res.status(200).send(`
       <div style="text-align: center; font-family: sans-serif; padding-top: 50px;">
