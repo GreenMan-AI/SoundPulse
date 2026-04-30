@@ -1345,54 +1345,49 @@ self.addEventListener('fetch',e=>{const u=new URL(e.request.url);if(u.pathname.s
   res.send(sw);
 });
 
-// 1. DROŠS veids, kā noķert visus pieprasījumus
+// --- SERVERA BEIGU DAĻA ---
+
+// 1. Galvenā maršrutēšana (lai rādītu smuku sākumlapu)
 app.use((req, res, next) => {
+  // Ja pieprasījums ir domāts API (Login/Register), laižam to tālāk
   if (req.path.startsWith('/api')) {
     return next();
   }
 
+  // Ja kāds atver galveno domēnu (https://soundpulse-oe3r.onrender.com/)
   if (req.path === '/') {
     return res.status(200).send(`
       <div style="text-align: center; font-family: sans-serif; padding-top: 50px;">
-        <h1>SoundPulse API v3.0</h1>
-        <p style="color: green;">● Serveris ir tiešsaistē un savienots ar MongoDB</p>
-        <hr style="width: 200px;">
+        <h1 style="color: #1565a0;">SoundPulse API v3.0</h1>
+        <p style="color: green; font-weight: bold;">● Serveris ir tiešsaistē</p>
+        <hr style="width: 250px; margin: 20px auto; border: 0; border-top: 1px solid #ccc;">
         <p>Gatavs savienojumam ar mobilo aplikāciju.</p>
+        <p style="font-size: 0.8em; color: #666;">Pārbaude: <a href="/api/health">/api/health</a></p>
       </div>
     `);
   }
 
-  const publicIdx = path.join(__dirname, 'public', 'index.html');
-  const rootIdx = path.join(__dirname, 'index.html');
+  // Ja lapa neeksistē
+  res.status(404).send('Lapa nav atrasta.');
+});
 
-  if (fs.existsSync(publicIdx)) {
-    return res.sendFile(publicIdx);
-  } else if (fs.existsSync(rootIdx)) {
-    return res.sendFile(rootIdx);
-  } else {
-    return res.status(404).send('Lapa nav atrasta.');
-  }
-
-// 2. VIENREIZĒJA servera palaišana pēc MongoDB savienojuma
+// 2. Servera palaišana un savienojums ar MongoDB
 mongoose.connection.once('open', async () => {
   try {
-    // Admin izveide
+    // Ja tev ir definēta admina izveides funkcija, tā tiks izpildīta
     if (typeof seedAdmin === 'function') {
       await seedAdmin();
     }
     
-    // Servera palaišana TIKAI ŠEIT
     server.listen(PORT, () => {
       console.log(`
-╔═══════════════════════════════════════════════════════════╗
-║          SoundPulse v3.0 — GATAVS DARBAM                  ║
-║   Serveris ir ONLINE portā: ${PORT.toString().padEnd(26)} ║
-║                                                           ║
-╚═══════════════════════════════════════════════════════════╝
+  ╔═══════════════════════════════════════════════════════════╗
+  ║          SoundPulse v3.0 — GATAVS DARBAM                  ║
+  ║   Serveris ir ONLINE portā: \x1b[32m${PORT.toString().padEnd(29)}\x1b[0m ║
+  ╚═══════════════════════════════════════════════════════════╝
       `);
     });
   } catch (err) {
     console.error("Kritiska kļūda startējot serveri:", err);
   }
-
 });
