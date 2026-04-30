@@ -1365,7 +1365,7 @@ self.addEventListener('fetch',e=>{const u=new URL(e.request.url);if(u.pathname.s
   } else if (fs.existsSync(rootIdx)) {
     return res.sendFile(rootIdx);
   } else {
-    return res.status(404).send('SoundPulse serveris ir tiešsaistē, bet index.html trūkst.');
+    return res.status(404).send('Lapa nav atrasta.');
   }
 
 // 2. VIENREIZĒJA servera palaišana pēc MongoDB savienojuma
