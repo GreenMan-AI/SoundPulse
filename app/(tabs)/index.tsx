@@ -2,8 +2,9 @@ import {
   View, Text, StyleSheet, FlatList,
   TouchableOpacity, RefreshControl, Platform,
   ActivityIndicator, TextInput,
+  useWindowDimensions, // 1. Iespējo izmēru noteikšanu
 } from 'react-native';
-import { useRouter } from 'expo-router'; // Pievienots routeris
+import { useRouter } from 'expo-router';
 import { useState, useEffect, useMemo } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { useApp, API } from '../../components/AppContext';
@@ -18,12 +19,18 @@ type SortKey = 'default' | 'title' | 'artist' | 'plays';
 
 export default function HomeScreen() {
   const { tracks, setTracks, t, user } = useApp();
-  const router = useRouter(); // Inicializējam routeri
+  const router = useRouter();
+  
+  // 2. Automātiska mēroga un orientācijas noteikšana
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const numColumns = isLandscape ? 2 : 1; 
+
   const [refreshing, setRefreshing] = useState(false);
-  const [loading, setLoading]       = useState(true);
-  const [error, setError]           = useState('');
-  const [search, setSearch]         = useState('');
-  const [sort, setSort]             = useState<SortKey>('default');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [search, setSearch] = useState('');
+  const [sort, setSort] = useState<SortKey>('default');
 
   const loadTracks = async () => {
     try {
@@ -75,27 +82,23 @@ export default function HomeScreen() {
 
   return (
     <View style={s.container}>
-      {/* ── Header ── */}
-      <View style={s.header}>
+      {/* Header pielāgojas augstumam (paddingTop) */}
+      <View style={[s.header, { paddingTop: isLandscape ? 20 : (Platform.OS === 'ios' ? 60 : 45) }]}>
         <View>
           <Text style={s.greeting}>👋 {user?.username || 'Viesis'}</Text>
           <Text style={s.logo}>SoundPulse</Text>
         </View>
         
-        {/* Šeit parādīsies poga, ja esi ielogojies kā admins */}
-        {user?.isAdmin && (
-          <TouchableOpacity 
-            onPress={() => router.push('/admin')}
-            style={s.adminBtn}
-          >
-            <Ionicons name="add-circle" size={26} color="#00cfff" />
-          </TouchableOpacity>
-        )}
-        
-        <Text style={s.count}>{tracks.length} {t.tracksCount}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 15 }}>
+            {user?.isAdmin && (
+            <TouchableOpacity onPress={() => router.push('/admin')} style={s.adminBtn}>
+                <Ionicons name="add-circle" size={26} color="#00cfff" />
+            </TouchableOpacity>
+            )}
+            <Text style={s.count}>{tracks.length} {t.tracksCount}</Text>
+        </View>
       </View>
 
-      {/* ── Search ── */}
       <View style={s.searchWrap}>
         <Ionicons name="search" size={17} color="#555" style={{ marginRight: 8 }} />
         <TextInput
@@ -107,7 +110,6 @@ export default function HomeScreen() {
         />
       </View>
 
-      {/* ── Sort chips ── */}
       <View style={s.sortRow}>
         {SORTS.map(([id, label]) => (
           <TouchableOpacity
@@ -120,38 +122,27 @@ export default function HomeScreen() {
         ))}
       </View>
 
-      {/* ── Error ── */}
-      {!!error && (
-        <View style={s.errorBox}>
-          <Text style={s.errorTxt}>{error}</Text>
-          <TouchableOpacity onPress={loadTracks} style={s.retryBtn}>
-            <Text style={s.retryTxt}>↻</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-
-      {/* ── List ── */}
       <FlatList
+        key={numColumns} // Piespiež sarakstu pārzīmēt kolonnas pie pagriešanas
+        numColumns={numColumns}
         data={filtered}
         keyExtractor={(item: any) => item._id}
         contentContainerStyle={{ paddingHorizontal: 12, paddingBottom: 150 }}
+        columnWrapperStyle={numColumns > 1 ? { gap: 12 } : null} 
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#00cfff" />}
         renderItem={({ item, index }: any) => (
-          <TrackCard track={item} index={index} accentColor={COLORS[index % COLORS.length]} showAddBtn />
+          <View style={{ flex: 1/numColumns }}> 
+            <TrackCard track={item} index={index} accentColor={COLORS[index % COLORS.length]} showAddBtn />
+          </View>
         )}
         ListEmptyComponent={
-          <View style={s.empty}>
+          <View style={[s.empty, { marginTop: isLandscape ? 20 : 80 }]}>
             {loading ? (
               <ActivityIndicator size="large" color="#00cfff" />
             ) : (
               <>
                 <Ionicons name="musical-notes-outline" size={60} color="#222" />
                 <Text style={s.emptyTxt}>{t.noTracks}</Text>
-                {user?.isAdmin && (
-                   <TouchableOpacity onPress={() => router.push('/admin')} style={s.bigAdminBtn}>
-                      <Text style={s.bigAdminBtnTxt}>➕ PIEVIENOT DZIESMAS</Text>
-                   </TouchableOpacity>
-                )}
               </>
             )}
           </View>
@@ -168,14 +159,13 @@ const s = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-end',
     paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'ios' ? 60 : 45,
     paddingBottom: 14,
     backgroundColor: '#111118',
   },
   greeting: { color: '#555', fontSize: 12 },
   logo:     { fontSize: 24, fontWeight: '900', color: '#00cfff', marginTop: 2 },
   count:    { color: '#333', fontSize: 12, paddingBottom: 2 },
-  adminBtn: { padding: 5, marginBottom: -5 },
+  adminBtn: { padding: 5 },
   searchWrap: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -190,7 +180,7 @@ const s = StyleSheet.create({
     borderColor: '#1e1e2a',
   },
   searchInput: { flex: 1, color: '#fff', fontSize: 14 },
-  sortRow: { flexDirection: 'row', paddingHorizontal: 12, paddingBottom: 8, gap: 6 },
+  sortRow: { flexDirection: 'row', paddingHorizontal: 12, paddingBottom: 8, gap: 6, flexWrap: 'wrap' },
   sortChip: { paddingHorizontal: 11, paddingVertical: 5, borderRadius: 20, backgroundColor: '#111118', borderWidth: 1, borderColor: '#1e1e2a' },
   sortChipActive: { backgroundColor: '#00cfff22', borderColor: '#00cfff55' },
   sortTxt:       { color: '#444', fontSize: 11, fontWeight: '600' },
@@ -199,8 +189,6 @@ const s = StyleSheet.create({
   errorTxt:  { color: '#ef4444', fontSize: 12, flex: 1 },
   retryBtn:  { backgroundColor: '#ef444422', borderRadius: 8, padding: 5 },
   retryTxt:  { color: '#ef4444', fontWeight: 'bold' },
-  empty:    { alignItems: 'center', marginTop: 80, gap: 12 },
+  empty:     { alignItems: 'center', gap: 12 },
   emptyTxt: { color: '#444', fontSize: 15 },
-  bigAdminBtn: { backgroundColor: '#00cfff', padding: 15, borderRadius: 12, marginTop: 10 },
-  bigAdminBtnTxt: { color: '#000', fontWeight: 'bold' }
 });

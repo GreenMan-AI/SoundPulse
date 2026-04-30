@@ -3,7 +3,7 @@
     "name": "SoundPulse",
     "slug": "SoundPulse",
     "version": "1.0.1",
-    "orientation": "portrait",
+    "orientation": "default",
     "icon": "./assets/ic_launcher.png",
     "scheme": "soundpulse",
     "userInterfaceStyle": "automatic",

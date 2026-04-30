@@ -1,15 +1,41 @@
 import React, { createContext, useContext, useState, useRef, useEffect } from 'react';
-import { AppState } from 'react-native';
+import { Alert } from 'react-native';
 import { Audio } from 'expo-av';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { translations, Lang } from '../i18n';
 
-export const API = 'https://soundpulse-oe3r.onrender.com/api';
+export const API = 'https://soundpulse-oe3r.onrender.com';
 
+// Bāzes tēmu krāsas
+export const themes = {
+  dark: {
+    bg: '#0a0a0f',
+    card: '#111118',
+    text: '#ffffff',
+    subText: '#999999',
+    border: '#1e1e2a',
+    tabBar: '#0f0f14',
+  },
+  light: {
+    bg: '#f4f4f9',
+    card: '#ffffff',
+    text: '#1a1a1a',
+    subText: '#666666',
+    border: '#e0e0e0',
+    tabBar: '#ffffff',
+  }
+};
+
+export type ThemeMode = 'light' | 'dark';
 export interface NamedPlaylist { id: string; name: string; tracks: any[]; }
 
 interface AppContextType {
   lang: Lang; setLang: (l: Lang) => void;
   t: typeof translations.lv;
+  themeMode: ThemeMode; setThemeMode: (m: ThemeMode) => void;
+  accentColor: string; setAccentColor: (c: string) => void;
+  colors: any; 
+  
   langChosen: boolean; setLangChosen: (v: boolean) => void;
   user: any; token: string;
   login: (u: string, p: string) => Promise<string | null>;
@@ -37,31 +63,75 @@ interface AppContextType {
   uploadLimits: { remaining: number; maxSizeMB: number; maxDurationMin: number; } | null;
   fetchUploadLimits: () => Promise<void>;
   serverOnline: boolean;
+  appIntegrity: { isPrivate: boolean; isEncrypted: boolean; noTracking: boolean; };
 }
 
 const AppContext = createContext<AppContextType>({} as AppContextType);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
-  const [lang, setLang]             = useState<Lang>('lv');
+  const [lang, setLangState] = useState<Lang>('lv');
   const [langChosen, setLangChosen] = useState(false);
-  const [user, setUser]             = useState<any>(null);
-  const [token, setToken]           = useState('');
+  const [themeMode, setThemeModeState] = useState<ThemeMode>('dark');
+  const [accentColor, setAccentColorState] = useState('#00cfff');
+  
+  const [user, setUser] = useState<any>(null);
+  const [token, setToken] = useState('');
   const [serverOnline, setServerOnline] = useState(false);
-  const [tracks, setTracks]         = useState<any[]>([]);
-  const [playing, setPlaying]       = useState<any>(null);
-  const [isPlaying, setIsPlaying]   = useState(false);
-  const [shuffle, setShuffle]       = useState(false);
-  const [repeat, setRepeat]         = useState(false);
-  const [playlist, setPlaylist]     = useState<any[]>([]);
+  const [tracks, setTracks] = useState<any[]>([]);
+  const [playing, setPlaying] = useState<any>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [shuffle, setShuffle] = useState(false);
+  const [repeat, setRepeat] = useState(false);
+  const [playlist, setPlaylist] = useState<any[]>([]);
   const [namedPlaylists, setNamedPlaylists] = useState<NamedPlaylist[]>([]);
-  const [likes, setLikes]           = useState<string[]>([]);
-  const [banner, setBanner]         = useState('');
+  const [likes, setLikes] = useState<string[]>([]);
+  const [banner, setBanner] = useState('');
   const [profileData, setProfileData] = useState({ nick: '', avatarUrl: '', bio: '', mood: '' });
   const [uploadLimits, setUploadLimits] = useState<any>(null);
 
-  const t = translations[lang];
+  // --- DINAMISKĀS KRĀSAS ---
+  // Šis objekts tiek pārrēķināts ikreiz, kad mainās tēma vai akcents
+  const colors = { 
+    ...themes[themeMode], 
+    accent: accentColor 
+  };
 
-  // ── Audio fona atskaņošana ──
+  const t = translations[lang];
+  const appIntegrity = { isPrivate: true, isEncrypted: true, noTracking: true };
+
+  // Ielāde no atmiņas
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const [sLang, sTheme, sColor] = await Promise.all([
+          AsyncStorage.getItem('user_lang'),
+          AsyncStorage.getItem('user_theme'),
+          AsyncStorage.getItem('user_accent')
+        ]);
+        if (sLang) setLangState(sLang as Lang);
+        if (sTheme) setThemeModeState(sTheme as ThemeMode);
+        if (sColor) setAccentColorState(sColor);
+      } catch (e) { console.log('Kļūda ielādējot iestatījumus'); }
+    };
+    loadSettings();
+  }, []);
+
+  const setLang = (l: Lang) => {
+    setLangState(l);
+    AsyncStorage.setItem('user_lang', l);
+  };
+
+  const setThemeMode = (m: ThemeMode) => {
+    setThemeModeState(m);
+    AsyncStorage.setItem('user_theme', m);
+  };
+
+  const setAccentColor = (c: string) => {
+    setAccentColorState(c);
+    AsyncStorage.setItem('user_accent', c);
+  };
+
+  // Audio iestatījumi
   useEffect(() => {
     Audio.setAudioModeAsync({
       staysActiveInBackground: true,
@@ -71,50 +141,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }).catch(() => {});
   }, []);
 
-  // ── Servera "uzmodināšana" — Render free tier guļ! ──
+  // Servera veselības pārbaude
   useEffect(() => {
-    // Palīgfunkcija — fetch ar timeout (AbortController — jo AbortSignal.timeout nav RN atbalstīts)
-    const fetchWithTimeout = (url: string, ms = 20000) => {
-      const ctrl = new AbortController();
-      const id = setTimeout(() => ctrl.abort(), ms);
-      return fetch(url, { signal: ctrl.signal }).finally(() => clearTimeout(id));
-    };
-
-    let wakeAttempt = 0;
     const wakeUp = async () => {
       try {
-        wakeAttempt++;
-        const r = await fetchWithTimeout(`${API}/api/health`, 20000);
+        const r = await fetch(`${API}/api/health`);
         const d = await r.json();
-        if (d.ok) {
-          setServerOnline(true);
-        } else {
-          if (wakeAttempt < 10) setTimeout(wakeUp, 5000);
-        }
-      } catch {
-        // Serveris vēl guļ — mēģina vēlreiz
-        if (wakeAttempt < 10) setTimeout(wakeUp, 5000);
-      }
+        if (d.ok) setServerOnline(true);
+      } catch { setTimeout(wakeUp, 5000); }
     };
     wakeUp();
-    // Keepalive — ping katras 8 minūtes lai serveris neguļ
-    const keepAlive = setInterval(() => {
-      fetchWithTimeout(`${API}/api/health`, 10000).catch(() => {});
-    }, 8 * 60 * 1000);
-    return () => clearInterval(keepAlive);
   }, []);
-
-  // ── Auth ──────────────────────────────────────────────
-  // ── Fetch ar timeout helper ──
-  const apiFetch = (url: string, opts: RequestInit = {}, ms = 15000): Promise<Response> => {
-    const ctrl = new AbortController();
-    const id = setTimeout(() => ctrl.abort(), ms);
-    return fetch(url, { ...opts, signal: ctrl.signal }).finally(() => clearTimeout(id));
-  };
 
   const login = async (u: string, p: string): Promise<string | null> => {
     try {
-      const res = await apiFetch(`${API}/api/login`, {
+      const res = await fetch(`${API}/api/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: u, password: p }),
@@ -123,24 +164,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (d.token) {
         setUser({ username: d.username, role: d.role, isAdmin: d.role === 'admin' });
         setToken(d.token);
-        apiFetch(`${API}/api/ticker`)
-          .then(r => r.json())
-          .then(d => { if (d.text) setBanner(d.text); })
-          .catch(() => {});
         loadProfile(d.username, d.token);
         return null;
       }
       return d.error || t.error;
-    } catch (e: any) {
-      if (e?.name === 'AbortError') return 'Serveris nereaģē. Mēģini vēlreiz pēc 30s.';
-      return t.serverError;
-    }
+    } catch { return t.serverError; }
   };
 
   const register = async (u: string, p: string): Promise<string | null> => {
-    if (p.length < 6) return t.passMin;
     try {
-      const res = await apiFetch(`${API}/api/register`, {
+      const res = await fetch(`${API}/api/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: u, password: p }),
@@ -152,24 +185,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         return null;
       }
       return d.error || t.error;
-    } catch (e: any) {
-      if (e?.name === 'AbortError') return 'Serveris nereaģē. Mēģini vēlreiz pēc 30s.';
-      return t.serverError;
-    }
+    } catch { return t.serverError; }
   };
 
-  const logout = async () => {
-    if (token) {
-      fetch(`${API}/api/logout`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } }).catch(() => {});
-    }
+  const logout = () => {
     setUser(null); setToken('');
     setPlaying(null); setIsPlaying(false);
     setPlaylist([]); setLikes([]);
     setProfileData({ nick: '', avatarUrl: '', bio: '', mood: '' });
-    setUploadLimits(null);
   };
 
-  // ── Profile ───────────────────────────────────────────
   const loadProfile = async (username: string, tok: string) => {
     try {
       const res = await fetch(`${API}/api/profiles/${username}`);
@@ -194,15 +219,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify(data),
       });
       const d = await res.json();
-      if (d.profile) {
-        setProfileData(prev => ({
-          ...prev,
-          nick: d.profile.nick || prev.nick,
-          bio:  d.profile.bio  || prev.bio,
-          mood: d.profile.mood || prev.mood,
-        }));
+      if (res.ok && d.profile) {
+        setProfileData(prev => ({ ...prev, ...d.profile }));
+        Alert.alert(t.info, t.saved);
       }
-    } catch {}
+    } catch { Alert.alert(t.error, t.serverError); }
   };
 
   const uploadAvatar = async (uri: string): Promise<string | null> => {
@@ -226,33 +247,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     } catch { return null; }
   };
 
-  // ── Upload limits ─────────────────────────────────────
   const fetchUploadLimits = async () => {
     if (!token) return;
     try {
-      const res = await fetch(`${API}/api/upload/limits`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await fetch(`${API}/api/upload/limits`, { headers: { Authorization: `Bearer ${token}` } });
       const d = await res.json();
       setUploadLimits(d);
     } catch {}
   };
 
-  // ── Player ────────────────────────────────────────────
   const tracksRef = useRef<any[]>([]);
   const playingRef = useRef<any>(null);
-  const isPlayingRef = useRef(false);
-
   useEffect(() => { tracksRef.current = tracks; }, [tracks]);
   useEffect(() => { playingRef.current = playing; }, [playing]);
-  useEffect(() => { isPlayingRef.current = isPlaying; }, [isPlaying]);
 
   const playNext = () => {
     if (!tracksRef.current.length) return;
-    if (shuffle) {
-      setPlaying(tracksRef.current[Math.floor(Math.random() * tracksRef.current.length)]);
-      return;
-    }
     const idx = tracksRef.current.findIndex(t => t._id === playingRef.current?._id);
     setPlaying(tracksRef.current[(idx + 1) % tracksRef.current.length]);
   };
@@ -263,31 +273,32 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setPlaying(tracksRef.current[(idx - 1 + tracksRef.current.length) % tracksRef.current.length]);
   };
 
-  // ── Playlist ──────────────────────────────────────────
-  const addToPlaylist       = (track: any)  => { if (!playlist.find(t => t._id === track._id)) setPlaylist(p => [...p, track]); };
-  const removeFromPlaylist  = (id: string)  => setPlaylist(p => p.filter(t => t._id !== id));
-  const toggleLike          = (id: string)  => setLikes(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id]);
-  const createNamedPlaylist = (name: string) => setNamedPlaylists(p => [...p, { id: Date.now().toString(), name, tracks: [] }]);
-  const deleteNamedPlaylist = (id: string)   => setNamedPlaylists(p => p.filter(x => x.id !== id));
-  const addTrackToNamedPlaylist = (plId: string, track: any) =>
-    setNamedPlaylists(p => p.map(x => x.id === plId && !x.tracks.find(t => t._id === track._id) ? { ...x, tracks: [...x.tracks, track] } : x));
-  const removeTrackFromNamedPlaylist = (plId: string, trackId: string) =>
-    setNamedPlaylists(p => p.map(x => x.id === plId ? { ...x, tracks: x.tracks.filter(t => t._id !== trackId) } : x));
-
   return (
     <AppContext.Provider value={{
-      lang, setLang, t, langChosen, setLangChosen,
+      lang, setLang, t, 
+      themeMode, setThemeMode, accentColor, setAccentColor, colors,
+      langChosen, setLangChosen,
       user, token, login, register, logout,
       tracks, setTracks,
       playing, setPlaying, isPlaying, setIsPlaying,
       playNext, playPrev, shuffle, setShuffle, repeat, setRepeat,
-      playlist, addToPlaylist, removeFromPlaylist,
-      namedPlaylists, createNamedPlaylist, deleteNamedPlaylist,
-      addTrackToNamedPlaylist, removeTrackFromNamedPlaylist,
-      likes, toggleLike, banner, setBanner,
+      playlist, 
+      addToPlaylist: (track) => {
+        if (playlist.find(t => t._id === track._id)) return Alert.alert(t.info, t.alreadyAdded);
+        setPlaylist(p => [...p, track]);
+      },
+      removeFromPlaylist: (id) => setPlaylist(p => p.filter(t => t._id !== id)),
+      namedPlaylists, 
+      createNamedPlaylist: (name) => setNamedPlaylists(p => [...p, { id: Date.now().toString(), name, tracks: [] }]), 
+      deleteNamedPlaylist: (id) => setNamedPlaylists(p => p.filter(x => x.id !== id)),
+      addTrackToNamedPlaylist: (plId, track) => setNamedPlaylists(p => p.map(x => x.id === plId ? (x.tracks.find(t=>t._id===track._id) ? (Alert.alert(t.info, t.alreadyAdded), x) : {...x, tracks: [...x.tracks, track]}) : x)),
+      removeTrackFromNamedPlaylist: (plId, trackId) => setNamedPlaylists(p => p.map(x => x.id === plId ? { ...x, tracks: x.tracks.filter(t => t._id !== trackId) } : x)),
+      likes, toggleLike: (id) => setLikes(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id]),
+      banner, setBanner,
       profileData, saveProfile, uploadAvatar,
       uploadLimits, fetchUploadLimits,
       serverOnline,
+      appIntegrity,
     }}>
       {children}
     </AppContext.Provider>

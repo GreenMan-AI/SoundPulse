@@ -109,8 +109,11 @@ const s = StyleSheet.create({
     backgroundColor: '#111118',
     borderRadius: 12,
     padding: 10,
-    marginBottom: 6,
+    marginVertical: 4,
+    marginHorizontal: 4,
+    marginBottom: 8,
     gap: 8,
+    flex: 1,
   },
   indexBox: {
     width: 22,

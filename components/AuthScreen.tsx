@@ -50,6 +50,7 @@ export default function AuthScreen() {
   return (
     <KeyboardAvoidingView style={s.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <ScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled">
+        {/* Valodas izvēle */}
         <View style={s.langRow}>
           {LANGS.map(l => (
             <TouchableOpacity key={l.code} style={[s.langBtn, lang === l.code && s.langActive]} onPress={() => setLang(l.code)}>
@@ -60,59 +61,108 @@ export default function AuthScreen() {
             <Ionicons name="globe-outline" size={20} color="#00cfff" />
           </TouchableOpacity>
         </View>
+
         <Text style={s.logo}>🎵 SoundPulse</Text>
+
+        {/* Servera statuss - Iztulkots */}
         {!serverOnline && (
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 8 }}>
+          <View style={s.statusRow}>
             <ActivityIndicator size="small" color="#00cfff88" />
-            <Text style={{ color: '#00cfff99', fontSize: 12 }}>
-              Serveris palaižas... (~30s)
+            <Text style={[s.statusTxt, { color: '#00cfff99' }]}>
+              {t.serverStarting}
             </Text>
           </View>
         )}
         {serverOnline && (
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginBottom: 8 }}>
-            <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#22c55e' }} />
-            <Text style={{ color: '#22c55e99', fontSize: 11 }}>Serveris gatavs</Text>
+          <View style={s.statusRow}>
+            <View style={s.statusDot} />
+            <Text style={[s.statusTxt, { color: '#22c55e99' }]}>{t.serverReady}</Text>
           </View>
         )}
+
         <Text style={s.sub}>{mode === 'login' ? t.welcomeBack : t.createAccount}</Text>
+
+        {/* Pārslēdzis - Iztulkots */}
         <View style={s.toggle}>
-          <TouchableOpacity style={[s.toggleBtn, mode === 'login' && s.toggleActive]} onPress={() => { setMode('login'); setError(''); setConfirmPw(''); }}>
+          <TouchableOpacity 
+            style={[s.toggleBtn, mode === 'login' && s.toggleActive]} 
+            onPress={() => { setMode('login'); setError(''); setConfirmPw(''); }}
+          >
             <Text style={[s.toggleTxt, mode === 'login' && s.toggleTxtActive]}>{t.login}</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[s.toggleBtn, mode === 'register' && s.toggleActive]} onPress={() => { setMode('register'); setError(''); }}>
+          <TouchableOpacity 
+            style={[s.toggleBtn, mode === 'register' && s.toggleActive]} 
+            onPress={() => { setMode('register'); setError(''); }}
+          >
             <Text style={[s.toggleTxt, mode === 'register' && s.toggleTxtActive]}>{t.register}</Text>
           </TouchableOpacity>
         </View>
+
+        {/* Ievades lauki */}
         <View style={s.inputWrap}>
           <Ionicons name="person-outline" size={18} color="#444" style={{ marginRight: 10 }} />
-          <TextInput style={s.input} placeholder={t.username} placeholderTextColor="#333" value={username} onChangeText={setUsername} autoCapitalize="none" autoCorrect={false} />
+          <TextInput 
+            style={s.input} 
+            placeholder={t.username} 
+            placeholderTextColor="#333" 
+            value={username} 
+            onChangeText={setUsername} 
+            autoCapitalize="none" 
+            autoCorrect={false} 
+          />
         </View>
+
         <View style={s.inputWrap}>
           <Ionicons name="lock-closed-outline" size={18} color="#444" style={{ marginRight: 10 }} />
-          <TextInput style={[s.input, { flex: 1 }]} placeholder={t.password} placeholderTextColor="#333" value={password} onChangeText={setPassword} secureTextEntry={!showPw} autoCapitalize="none" />
+          <TextInput 
+            style={[s.input, { flex: 1 }]} 
+            placeholder={t.password} 
+            placeholderTextColor="#333" 
+            value={password} 
+            onChangeText={setPassword} 
+            secureTextEntry={!showPw} 
+            autoCapitalize="none" 
+          />
           <TouchableOpacity onPress={() => setShowPw(v => !v)} style={{ padding: 4 }}>
             <Ionicons name={showPw ? 'eye-off' : 'eye'} size={18} color="#444" />
           </TouchableOpacity>
         </View>
+
+        {/* Paroles stiprums - Iztulkoti LABELS */}
         {mode === 'register' && password.length > 0 && (
           <View style={s.strengthRow}>
             <View style={s.strengthBars}>
-              {[1,2,3,4].map(i => <View key={i} style={[s.bar, { backgroundColor: i <= strength() ? COLORS[strength()] : '#1a1a25' }]} />)}
+              {[1,2,3,4].map(i => (
+                <View key={i} style={[s.bar, { backgroundColor: i <= strength() ? COLORS[strength()] : '#1a1a25' }]} />
+              ))}
             </View>
             <Text style={[s.strengthLbl, { color: COLORS[strength()] }]}>{LABELS[strength()]}</Text>
           </View>
         )}
+
         {mode === 'register' && (
           <View style={s.inputWrap}>
             <Ionicons name="lock-closed-outline" size={18} color="#444" style={{ marginRight: 10 }} />
-            <TextInput style={[s.input, { flex: 1 }]} placeholder={t.repPw || 'Atkārtot paroli'} placeholderTextColor="#333" value={confirmPw} onChangeText={setConfirmPw} secureTextEntry={!showPw} autoCapitalize="none" />
+            <TextInput 
+              style={[s.input, { flex: 1 }]} 
+              placeholder={t.repPw} 
+              placeholderTextColor="#333" 
+              value={confirmPw} 
+              onChangeText={setConfirmPw} 
+              secureTextEntry={!showPw} 
+              autoCapitalize="none" 
+            />
           </View>
         )}
+
         {!!error && <Text style={s.error}>{error}</Text>}
+
         <TouchableOpacity style={[s.btn, loading && { opacity: 0.6 }]} onPress={submit} disabled={loading}>
-          <Text style={s.btnTxt}>{loading ? '...' : mode === 'login' ? t.login : t.register}</Text>
+          <Text style={s.btnTxt}>
+            {loading ? '...' : mode === 'login' ? t.login : t.register}
+          </Text>
         </TouchableOpacity>
+
         {mode === 'register' && <Text style={s.hint}>{t.passMin}</Text>}
       </ScrollView>
     </KeyboardAvoidingView>
@@ -126,6 +176,9 @@ const s = StyleSheet.create({
   langBtn: { padding: 7, borderRadius: 8, backgroundColor: '#111118', borderWidth: 1, borderColor: '#1e1e2a' },
   langActive: { borderColor: '#00cfff' },
   logo: { fontSize: 32, fontWeight: '900', color: '#00cfff', textAlign: 'center', marginBottom: 6 },
+  statusRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 8 },
+  statusTxt: { fontSize: 12 },
+  statusDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#22c55e' },
   sub: { color: '#444', fontSize: 14, textAlign: 'center', marginBottom: 28 },
   toggle: { flexDirection: 'row', backgroundColor: '#111118', borderRadius: 14, marginBottom: 22, padding: 4 },
   toggleBtn: { flex: 1, paddingVertical: 10, borderRadius: 11, alignItems: 'center' },
