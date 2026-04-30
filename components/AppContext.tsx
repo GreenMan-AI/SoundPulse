@@ -3,7 +3,7 @@ import { AppState } from 'react-native';
 import { Audio } from 'expo-av';
 import { translations, Lang } from '../i18n';
 
-export const API = 'https://soundpulse-oe3r.onrender.com/api';
+export const API = 'https://soundpulse-oe3r.onrender.com';
 
 export interface NamedPlaylist { id: string; name: string; tracks: any[]; }
 
