@@ -24,6 +24,8 @@
       },
       "package": "com.greenmanai.soundpulse",
       "versionCode": 1,
+      "package": "com.agnis.soundpulse",
+      "versionCode": 2,
       "permissions": [
         "android.permission.INTERNET",
         "android.permission.READ_EXTERNAL_STORAGE",
@@ -78,4 +80,5 @@
     },
     "owner": "greenman"
   }
+}
 }
