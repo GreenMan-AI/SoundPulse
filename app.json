@@ -22,8 +22,6 @@
         "foregroundImage": "./assets/ic_launcher.png",
         "backgroundColor": "#0a0a0f"
       },
-      "package": "com.greenmanai.soundpulse",
-      "versionCode": 1,
       "package": "com.agnis.soundpulse",
       "versionCode": 2,
       "permissions": [
@@ -80,5 +78,4 @@
     },
     "owner": "greenman"
   }
-}
 }
