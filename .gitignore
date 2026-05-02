@@ -42,3 +42,7 @@ app-example
 # generated native folders
 /ios
 /android
+
+# Drošības faili — NEKAD negit!
+credentials.json
+google-services.json
