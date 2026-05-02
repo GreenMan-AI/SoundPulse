@@ -25,6 +25,7 @@ export default function TabLayout() {
           tabBarLabelStyle: { fontSize: 10, fontWeight: '600' },
         }}
       >
+        {/* 1. Mūzika */}
         <Tabs.Screen
           name="index"
           options={{
@@ -34,6 +35,8 @@ export default function TabLayout() {
             ),
           }}
         />
+
+        {/* 2. Meklēt */}
         <Tabs.Screen
           name="explore"
           options={{
@@ -43,6 +46,19 @@ export default function TabLayout() {
             ),
           }}
         />
+
+        {/* 3. Augšupielādēt — PIEEJAMS VISIEM LIETOTĀJIEM */}
+        <Tabs.Screen
+          name="upload"
+          options={{
+            title: t.upload ?? 'Augšupielādēt',
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="cloud-upload" size={size} color={color} />
+            ),
+          }}
+        />
+
+        {/* 4. Playliste */}
         <Tabs.Screen
           name="playlist"
           options={{
@@ -52,6 +68,8 @@ export default function TabLayout() {
             ),
           }}
         />
+
+        {/* 5. Mood */}
         <Tabs.Screen
           name="mood"
           options={{
@@ -61,15 +79,8 @@ export default function TabLayout() {
             ),
           }}
         />
-        <Tabs.Screen
-          name="share"
-          options={{
-            title: 'Dalīties',
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="share-social" size={size} color={color} />
-            ),
-          }}
-        />
+
+        {/* 6. Profils */}
         <Tabs.Screen
           name="profile"
           options={{
@@ -79,6 +90,19 @@ export default function TabLayout() {
             ),
           }}
         />
+
+        {/* 7. Dalīties */}
+        <Tabs.Screen
+          name="share"
+          options={{
+            title: 'Dalīties',
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="share-social" size={size} color={color} />
+            ),
+          }}
+        />
+
+        {/* 8. Admin — tikai adminiem */}
         <Tabs.Screen
           name="admin"
           options={{
@@ -89,6 +113,8 @@ export default function TabLayout() {
             tabBarItemStyle: user?.isAdmin ? {} : { display: 'none' },
           }}
         />
+
+        {/* 9. Diag — tikai adminiem */}
         <Tabs.Screen
           name="diag"
           options={{
