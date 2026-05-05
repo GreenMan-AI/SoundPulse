@@ -1,28 +1,27 @@
-import { StatusBar } from 'expo-status-bar';
-import { View } from 'react-native';
 import { Slot } from 'expo-router';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AppProvider, useApp } from '../components/AppContext';
 import LangScreen from '../components/LangScreen';
 import AuthScreen from '../components/AuthScreen';
-import BannerTicker from '../components/BannerTicker';
+import { View } from 'react-native';
 
 function RootContent() {
-  const { langChosen, user } = useApp();
+  const { langChosen, user, colors } = useApp();
   if (!langChosen) return <LangScreen />;
-  if (!user)       return <AuthScreen />;
+  if (!user) return <AuthScreen />;
   return (
-    <View style={{ flex: 1, backgroundColor: '#0a0a0f' }}>
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <Slot />
-      <BannerTicker />
     </View>
   );
 }
 
 export default function RootLayout() {
   return (
-    <AppProvider>
-      <StatusBar style="light" backgroundColor="#0a0a0f" />
-      <RootContent />
-    </AppProvider>
+    <SafeAreaProvider>
+      <AppProvider>
+        <RootContent />
+      </AppProvider>
+    </SafeAreaProvider>
   );
 }

@@ -1,76 +1,48 @@
-import { View, Text, StyleSheet, Animated, Easing, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
 import { useEffect, useRef } from 'react';
-import { Ionicons } from '@expo/vector-icons';
 import { useApp } from './AppContext';
 
-// TopBar — TIKAI UI komponents
-// Audio tiek pārvaldīts PlayerBar.tsx (tabs layout apakšā)
-// TopBar rāda banner ticker un papildu kontroles ja vajag
-
 export default function TopBar() {
-  const {
-    playing, isPlaying,
-    playNext, playPrev,
-    shuffle, setShuffle,
-    repeat, setRepeat,
-    banner,
-  } = useApp();
+  const { banner } = useApp();
+  const anim = useRef(new Animated.Value(400)).current;
+  const loop = useRef<Animated.CompositeAnimation | null>(null);
 
-  const tickerAnim = useRef(new Animated.Value(400)).current;
-  const tickerLoop = useRef<Animated.CompositeAnimation | null>(null);
-
-  // Banner ticker animācija
   useEffect(() => {
-    if (tickerLoop.current) tickerLoop.current.stop();
+    if (loop.current) loop.current.stop();
     if (!banner) return;
-    tickerAnim.setValue(400);
-    tickerLoop.current = Animated.loop(
-      Animated.timing(tickerAnim, {
-        toValue: -800,
-        duration: 14000,
+    anim.setValue(400);
+    loop.current = Animated.loop(
+      Animated.timing(anim, {
+        toValue: -900,
+        duration: 16000,
         easing: Easing.linear,
         useNativeDriver: true,
       })
     );
-    tickerLoop.current.start();
-    return () => { tickerLoop.current?.stop(); };
+    loop.current.start();
+    return () => { loop.current?.stop(); };
   }, [banner]);
 
-  // Nav nekas ja nav banner un nav playing
-  if (!banner && !playing) return null;
+  if (!banner) return null;
 
   return (
     <View style={s.wrapper}>
-      {/* Banner ticker */}
-      {!!banner && (
-        <View style={s.ticker}>
-          <Animated.Text
-            style={[s.tickerText, { transform: [{ translateX: tickerAnim }] }]}
-          >
-            📢  {banner}  •  {banner}  •  {banner}
+      <View style={s.ticker}>
+        <Text style={s.icon}>📢</Text>
+        <View style={s.overflow}>
+          <Animated.Text style={[s.text, { transform: [{ translateX: anim }] }]}>
+            {banner}  •  {banner}  •  {banner}
           </Animated.Text>
         </View>
-      )}
+      </View>
     </View>
   );
 }
 
 const s = StyleSheet.create({
-  wrapper: {
-    backgroundColor: '#111118',
-    borderBottomColor: '#00cfff22',
-    borderBottomWidth: 1,
-  },
-  ticker: {
-    backgroundColor: '#001a00',
-    overflow: 'hidden',
-    height: 26,
-    justifyContent: 'center',
-  },
-  tickerText: {
-    color: '#00ff88',
-    fontSize: 12,
-    fontWeight: '700',
-    position: 'absolute',
-  } as any,
+  wrapper:  { backgroundColor: '#00ff8810', borderBottomWidth: 1, borderBottomColor: '#00ff8828' },
+  ticker:   { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, height: 26, overflow: 'hidden' },
+  icon:     { fontSize: 13, marginRight: 6, flexShrink: 0 },
+  overflow: { flex: 1, overflow: 'hidden' },
+  text:     { color: '#00ff88', fontSize: 12, fontWeight: '800', position: 'absolute', width: 2000 },
 });

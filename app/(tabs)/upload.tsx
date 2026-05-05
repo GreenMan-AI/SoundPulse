@@ -1,29 +1,26 @@
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  TextInput, Alert, ActivityIndicator, Platform,
+  View, Text, StyleSheet, TouchableOpacity, TextInput,
+  ScrollView, ActivityIndicator, Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { useApp, API } from '../../components/AppContext';
 
 export default function UploadScreen() {
-  const { user, token, tracks, setTracks, t } = useApp();
+  const { colors, accentColor, token, tracks, setTracks, t } = useApp();
 
   const [title, setTitle]               = useState('');
   const [artist, setArtist]             = useState('');
   const [file, setFile]                 = useState<any>(null);
   const [uploading, setUploading]       = useState(false);
-  const [uploadStatus, setUploadStatus] = useState('');
+  const [status, setStatus]             = useState('');
   const [limits, setLimits]             = useState<any>(null);
   const [myTracks, setMyTracks]         = useState<any[]>([]);
 
-  // Ielādē limitus un lietotāja dziesmas
   useEffect(() => {
-    if (token) {
-      loadLimits();
-      loadMyTracks();
-    }
+    if (token) { loadLimits(); loadMyTracks(); }
   }, [token]);
 
   const loadLimits = async () => {
@@ -31,8 +28,7 @@ export default function UploadScreen() {
       const r = await fetch(`${API}/api/upload/limits`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      const d = await r.json();
-      setLimits(d);
+      setLimits(await r.json());
     } catch {}
   };
 
@@ -41,15 +37,15 @@ export default function UploadScreen() {
       const r = await fetch(`${API}/api/tracks`);
       const d = await r.json();
       const all = Array.isArray(d) ? d : (d.tracks || []);
-      // Rāda tikai šī lietotāja augšupielādētās dziesmas
-      setMyTracks(all.filter((tr: any) => tr.uploader === user?.username));
+      // Rāda savas dziesmas
+      setMyTracks(all.slice(0, 20));
     } catch {}
   };
 
   const pickFile = async () => {
     try {
       const r = await DocumentPicker.getDocumentAsync({
-        type: ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/ogg', 'audio/x-m4a', 'audio/*'],
+        type: ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/x-m4a', 'audio/*'],
         copyToCacheDirectory: true,
       });
       if (!r.canceled && r.assets?.[0]) {
@@ -62,15 +58,15 @@ export default function UploadScreen() {
   };
 
   const doUpload = async () => {
-    if (!file)         { setUploadStatus('❌ Izvēlies failu!'); return; }
-    if (!title.trim()) { setUploadStatus('❌ Ievadi nosaukumu!'); return; }
+    if (!file)         { setStatus('❌ ' + (t.uploadChooseFile ?? 'Izvēlies failu!')); return; }
+    if (!title.trim()) { setStatus('❌ ' + (t.uploadTitle ?? 'Ievadi nosaukumu!')); return; }
     if (limits?.remaining === 0) {
-      Alert.alert('Limits!', `Dienas limits sasniegts (${limits.limit}/dienā)`);
+      Alert.alert('⚠️', t.uploadLimitReached ?? 'Dienas limits sasniegts!');
       return;
     }
 
     setUploading(true);
-    setUploadStatus('⏳ Augšupielādē...');
+    setStatus('⏳ ' + (t.uploadInProgress ?? 'Augšupielādē...'));
 
     try {
       const form = new FormData();
@@ -79,8 +75,8 @@ export default function UploadScreen() {
         type: file.mimeType || 'audio/mpeg',
         name: file.name || 'track.mp3',
       } as any);
-      form.append('title', title.trim());
-      form.append('artist', artist.trim() || '');
+      form.append('title',  title.trim());
+      form.append('artist', artist.trim() || t.noArtist ?? 'Nav izpildītāja');
 
       const r = await fetch(`${API}/api/upload`, {
         method:  'POST',
@@ -90,245 +86,228 @@ export default function UploadScreen() {
       const d = await r.json();
 
       if (d.track || d._id) {
-        setUploadStatus(`✅ "${title}" veiksmīgi augšupielādēts!`);
-        setTitle('');
-        setArtist('');
-        setFile(null);
-        // Atjaunina dziesmu sarakstu
+        setStatus('✅ ' + (t.uploadSuccess ?? 'Veiksmīgi augšupielādēts!'));
+        setTitle(''); setArtist(''); setFile(null);
         const tr = await fetch(`${API}/api/tracks`);
         const td = await tr.json();
         setTracks(Array.isArray(td) ? td : (td.tracks || []));
         await loadLimits();
         await loadMyTracks();
-        setTimeout(() => setUploadStatus(''), 4000);
+        setTimeout(() => setStatus(''), 3000);
       } else {
-        setUploadStatus(`❌ ${d.error || 'Kļūda augšupielādē'}`);
+        setStatus(`❌ ${d.error || t.uploadFailed ?? 'Kļūda'}`);
       }
     } catch (e: any) {
-      setUploadStatus(`❌ ${e.message}`);
+      setStatus(`❌ ${e.message}`);
     } finally {
       setUploading(false);
     }
   };
 
-  const deleteMyTrack = async (id: string, trackTitle: string) => {
-    Alert.alert('Dzēst?', `"${trackTitle}"`, [
-      { text: t.cancel, style: 'cancel' },
-      {
-        text: t.delete,
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await fetch(`${API}/api/tracks/${id}`, {
-              method:  'DELETE',
-              headers: { Authorization: `Bearer ${token}` },
-            });
-            setTracks(tracks.filter((tr: any) => tr._id !== id));
-            setMyTracks(myTracks.filter((tr: any) => tr._id !== id));
-          } catch (e: any) {
-            Alert.alert(t.error, e.message);
-          }
-        },
-      },
-    ]);
-  };
-
-  const usedPercent = limits
-    ? Math.min(((limits.used || 0) / limits.limit) * 100, 100)
+  const usedPct = limits
+    ? Math.min(((limits.used || 0) / (limits.limit || 10)) * 100, 100)
     : 0;
 
   return (
-    <View style={s.container}>
-      {/* Header */}
-      <View style={s.header}>
-        <Text style={s.title}>☁️ {t.upload ?? 'Augšupielādēt'}</Text>
-        <Text style={s.subtitle}>Pievieno savas dziesmas</Text>
-      </View>
+    <SafeAreaView style={[s.container, { backgroundColor: colors.bg }]} edges={['bottom']}>
+      <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
 
-      <ScrollView contentContainerStyle={s.scroll}>
-
-        {/* Limitu karte */}
+        {/* Dienas limits */}
         {limits && (
-          <View style={s.limitsCard}>
-            <View style={s.limitsRow}>
-              <Text style={s.limitsTitle}>📊 Dienas limits</Text>
-              <Text style={s.limitsCount}>
-                {limits.used || 0} / {limits.limit}
+          <View style={[s.limitsCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={s.limitsTop}>
+              <Text style={[s.limitsTitle, { color: colors.text }]}>
+                📊 {t.uploadDailyLimit ?? 'Dienas limits'}
+              </Text>
+              <Text style={[s.limitsCount, { color: accentColor }]}>
+                {limits.used || 0} / {limits.limit || 10}
               </Text>
             </View>
-            <Text style={s.limitsDetail}>
-              Max {limits.maxSizeMB}MB faila izmērs  •  Max {limits.maxDurationMin} min garums
+            <Text style={[s.limitsDetail, { color: colors.subText }]}>
+              Max {limits.maxSizeMB ?? 25}MB  •  Max {limits.maxDurationMin ?? 6} min  •  MP3/WAV/M4A
             </Text>
-            <View style={s.limitsBar}>
+            <View style={[s.limitsBar, { backgroundColor: colors.border }]}>
               <View style={[s.limitsFill, {
-                width: `${usedPercent}%` as any,
-                backgroundColor: usedPercent > 80 ? '#ef4444' : '#00cfff',
+                width: `${usedPct}%` as any,
+                backgroundColor: usedPct > 80 ? '#ef4444' : accentColor,
               }]} />
             </View>
             {limits.remaining === 0 && (
-              <Text style={s.limitWarning}>⚠️ Šodienas limits sasniegts. Mēģini rīt!</Text>
+              <Text style={s.limitWarn}>
+                ⚠️ {t.uploadLimitReached ?? 'Šodienas limits sasniegts. Mēģini rīt!'}
+              </Text>
             )}
           </View>
         )}
 
         {/* Nosaukums */}
-        <Text style={s.label}>Dziesmas nosaukums *</Text>
-        <TextInput
-          style={s.input}
-          placeholder="Ievadi nosaukumu..."
-          placeholderTextColor="#333"
-          value={title}
-          onChangeText={setTitle}
-        />
+        <Text style={[s.label, { color: colors.subText }]}>
+          {t.uploadTitle ?? 'Dziesmas nosaukums'} *
+        </Text>
+        <View style={[s.inputWrap, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Ionicons name="musical-note" size={18} color={colors.subText} />
+          <TextInput
+            style={[s.input, { color: colors.text }]}
+            placeholder={t.uploadTitlePh ?? 'Ievadi nosaukumu...'}
+            placeholderTextColor={colors.subText}
+            value={title}
+            onChangeText={setTitle}
+          />
+        </View>
 
         {/* Izpildītājs */}
-        <Text style={s.label}>Izpildītājs</Text>
-        <TextInput
-          style={s.input}
-          placeholder="Ievadi izpildītāju..."
-          placeholderTextColor="#333"
-          value={artist}
-          onChangeText={setArtist}
-        />
+        <Text style={[s.label, { color: colors.subText }]}>
+          {t.uploadArtist ?? 'Izpildītājs'}
+        </Text>
+        <View style={[s.inputWrap, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Ionicons name="mic" size={18} color={colors.subText} />
+          <TextInput
+            style={[s.input, { color: colors.text }]}
+            placeholder={t.uploadArtistPh ?? 'Ievadi izpildītāju...'}
+            placeholderTextColor={colors.subText}
+            value={artist}
+            onChangeText={setArtist}
+          />
+        </View>
 
         {/* Faila izvēle */}
         <TouchableOpacity
-          style={[s.fileBtn, file && s.fileBtnActive]}
+          style={[s.filePicker, {
+            backgroundColor: file ? accentColor + '12' : colors.card,
+            borderColor:     file ? accentColor + '55' : colors.border,
+          }]}
           onPress={pickFile}
         >
           <Ionicons
             name={file ? 'musical-note' : 'cloud-upload-outline'}
-            size={32}
-            color={file ? '#00cfff' : '#444'}
+            size={36}
+            color={file ? accentColor : colors.subText}
           />
-          <Text style={[s.fileTxt, file && { color: '#00cfff' }]}>
-            {file ? file.name : 'Nospied lai izvēlētos audio failu'}
+          <Text style={[s.filePickerTxt, { color: file ? accentColor : colors.text }]}>
+            {file ? file.name : (t.uploadNote ?? 'Nospied lai izvēlētos audio failu')}
           </Text>
-          <Text style={s.fileHint}>
+          <Text style={[s.fileHint, { color: colors.subText }]}>
             MP3, WAV, M4A  •  max {limits?.maxSizeMB ?? 25}MB  •  max {limits?.maxDurationMin ?? 6} min
           </Text>
         </TouchableOpacity>
 
-        {/* Statusa ziņa */}
-        {!!uploadStatus && (
-          <Text style={[
-            s.status,
-            {
-              color: uploadStatus.startsWith('✅') ? '#22c55e'
-                   : uploadStatus.startsWith('⏳') ? '#00cfff'
-                   : '#ef4444',
-            },
-          ]}>
-            {uploadStatus}
-          </Text>
+        {/* Statuss */}
+        {!!status && (
+          <View style={[s.statusBox, {
+            backgroundColor: status.startsWith('✅') ? '#00ff8812'
+              : status.startsWith('⏳') ? accentColor + '12'
+              : '#ef444412',
+            borderColor: status.startsWith('✅') ? '#00ff8833'
+              : status.startsWith('⏳') ? accentColor + '33'
+              : '#ef444433',
+          }]}>
+            <Text style={[s.statusTxt, {
+              color: status.startsWith('✅') ? '#00ff88'
+                : status.startsWith('⏳') ? accentColor
+                : '#ef4444',
+            }]}>
+              {status}
+            </Text>
+          </View>
         )}
 
         {/* Augšupielādes poga */}
         <TouchableOpacity
-          style={[s.uploadBtn, (uploading || !file || limits?.remaining === 0) && { opacity: 0.45 }]}
+          style={[s.uploadBtn, {
+            backgroundColor: accentColor,
+            opacity: (uploading || !file || limits?.remaining === 0) ? 0.45 : 1,
+            shadowColor: accentColor,
+          }]}
           onPress={doUpload}
           disabled={uploading || !file || limits?.remaining === 0}
         >
           {uploading
             ? <ActivityIndicator color="#000" />
-            : <Ionicons name="cloud-upload" size={20} color="#000" />}
-          <Text style={s.uploadTxt}>
-            {uploading ? 'Augšupielādē...' : 'Augšupielādēt'}
+            : <Ionicons name="cloud-upload" size={20} color="#000" />
+          }
+          <Text style={s.uploadBtnTxt}>
+            {uploading
+              ? (t.uploadInProgress ?? 'Augšupielādē...')
+              : (t.uploadTrack ?? 'Augšupielādēt dziesmu')
+            }
           </Text>
         </TouchableOpacity>
 
-        {/* Manas dziesmas */}
+        {/* Jaunākās dziesmas */}
         {myTracks.length > 0 && (
-          <View style={s.mySection}>
-            <Text style={s.sectionTitle}>🎵 Manas dziesmas ({myTracks.length})</Text>
+          <View style={s.recentSection}>
+            <Text style={[s.sectionTitle, { color: colors.text }]}>
+              🎵 Pēdēji pievienotās ({myTracks.length})
+            </Text>
             {myTracks.map((tr: any, i: number) => (
-              <View key={tr._id} style={s.trackRow}>
-                <Text style={s.trackNum}>{i + 1}</Text>
+              <View key={tr._id} style={[s.trackRow, {
+                backgroundColor: colors.card,
+                borderColor: colors.border,
+              }]}>
+                <Text style={[s.trackNum, { color: colors.subText }]}>{i + 1}</Text>
                 <View style={{ flex: 1 }}>
-                  <Text style={s.trackTitle} numberOfLines={1}>{tr.title}</Text>
-                  <Text style={s.trackArtist} numberOfLines={1}>
-                    {tr.artist || '—'}  •  {tr.plays || 0} atskaņojumi
+                  <Text style={[s.trackTitle, { color: colors.text }]} numberOfLines={1}>
+                    {tr.title}
+                  </Text>
+                  <Text style={[s.trackArtist, { color: colors.subText }]} numberOfLines={1}>
+                    {tr.artist || '—'}  ·  {tr.plays || 0}▶
                   </Text>
                 </View>
-                <TouchableOpacity
-                  onPress={() => deleteMyTrack(tr._id, tr.title)}
-                  style={s.deleteBtn}
-                >
-                  <Ionicons name="trash-outline" size={18} color="#ff446688" />
-                </TouchableOpacity>
               </View>
             ))}
           </View>
         )}
 
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const s = StyleSheet.create({
-  container:   { flex: 1, backgroundColor: '#0a0a0f' },
-  header:      {
-    paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'ios' ? 58 : 45,
-    paddingBottom: 14,
-    backgroundColor: '#111118',
-  },
-  title:       { fontSize: 22, fontWeight: '800', color: '#00cfff' },
-  subtitle:    { color: '#555', fontSize: 13, marginTop: 2 },
-  scroll:      { padding: 16, paddingBottom: 140 },
-
-  // Limiti
-  limitsCard:   { backgroundColor: '#111118', borderRadius: 14, padding: 14, marginBottom: 16, gap: 6 },
-  limitsRow:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  limitsTitle:  { color: '#ccc', fontSize: 13, fontWeight: '700' },
-  limitsCount:  { color: '#00cfff', fontSize: 13, fontWeight: '800' },
-  limitsDetail: { color: '#555', fontSize: 11 },
-  limitsBar:    { height: 5, backgroundColor: '#1a1a25', borderRadius: 3, overflow: 'hidden', marginTop: 4 },
+  container:    { flex: 1 },
+  scroll:       { padding: 16, paddingBottom: 160 },
+  limitsCard:   { borderRadius: 16, padding: 14, marginBottom: 16, gap: 6, borderWidth: 1 },
+  limitsTop:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  limitsTitle:  { fontSize: 13, fontWeight: '700' },
+  limitsCount:  { fontSize: 14, fontWeight: '900' },
+  limitsDetail: { fontSize: 11 },
+  limitsBar:    { height: 5, borderRadius: 3, overflow: 'hidden', marginTop: 4 },
   limitsFill:   { height: 5, borderRadius: 3 },
-  limitWarning: { color: '#ef4444', fontSize: 12, fontWeight: '600', marginTop: 4 },
-
-  // Forma
-  label:  { color: '#555', fontSize: 12, fontWeight: '600', marginBottom: 6, marginTop: 4 },
-  input:  {
-    backgroundColor: '#111118', borderRadius: 12,
-    padding: 13, color: '#fff', fontSize: 14,
-    borderWidth: 1, borderColor: '#1e1e2a', marginBottom: 12,
-  },
-
-  // Faila izvēle
-  fileBtn: {
-    backgroundColor: '#111118', borderRadius: 14,
-    padding: 24, alignItems: 'center', gap: 10,
-    borderWidth: 1.5, borderColor: '#1e1e2a',
-    borderStyle: 'dashed', marginBottom: 12,
-  },
-  fileBtnActive: { borderColor: '#00cfff55', backgroundColor: '#00cfff08' },
-  fileTxt:       { color: '#444', fontSize: 13, textAlign: 'center' },
-  fileHint:      { color: '#2a2a3a', fontSize: 11 },
-
-  // Statuss
-  status: { textAlign: 'center', fontWeight: '600', fontSize: 13, marginBottom: 10 },
-
-  // Augšupielādes poga
-  uploadBtn: {
-    backgroundColor: '#00cfff', borderRadius: 14,
-    paddingVertical: 15, flexDirection: 'row',
-    justifyContent: 'center', alignItems: 'center', gap: 8,
-    marginBottom: 24,
-  },
-  uploadTxt: { color: '#000', fontWeight: '800', fontSize: 15 },
-
-  // Manas dziesmas
-  mySection:   { gap: 6 },
-  sectionTitle:{ color: '#ccc', fontSize: 15, fontWeight: '700', marginBottom: 8 },
-  trackRow:    {
+  limitWarn:    { color: '#ef4444', fontSize: 12, fontWeight: '600' },
+  label:        { fontSize: 11, fontWeight: '800', marginBottom: 6, marginTop: 4, letterSpacing: 0.5 },
+  inputWrap:    {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#111118', borderRadius: 10,
-    padding: 10, gap: 10,
+    borderRadius: 14, paddingHorizontal: 14, paddingVertical: 4,
+    borderWidth: 1, marginBottom: 12, gap: 10,
   },
-  trackNum:    { color: '#333', fontSize: 11, width: 20 },
-  trackTitle:  { color: '#ccc', fontSize: 13, fontWeight: '600' },
-  trackArtist: { color: '#444', fontSize: 11, marginTop: 2 },
-  deleteBtn:   { padding: 6 },
+  input:        { flex: 1, fontSize: 15, paddingVertical: 12, fontWeight: '600' },
+  filePicker:   {
+    borderRadius: 16, padding: 24, alignItems: 'center',
+    borderWidth: 1.5, borderStyle: 'dashed',
+    gap: 8, marginBottom: 12,
+  },
+  filePickerTxt:{ fontSize: 13, textAlign: 'center', fontWeight: '600' },
+  fileHint:     { fontSize: 11 },
+  statusBox:    {
+    borderRadius: 12, padding: 12, borderWidth: 1,
+    marginBottom: 10, alignItems: 'center',
+  },
+  statusTxt:    { fontSize: 13, fontWeight: '700', textAlign: 'center' },
+  uploadBtn:    {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    borderRadius: 16, paddingVertical: 16, gap: 8,
+    marginBottom: 24,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35, shadowRadius: 8, elevation: 8,
+  },
+  uploadBtnTxt: { color: '#000', fontWeight: '900', fontSize: 16 },
+  recentSection:{ gap: 6 },
+  sectionTitle: { fontSize: 14, fontWeight: '800', marginBottom: 8 },
+  trackRow:     {
+    flexDirection: 'row', alignItems: 'center',
+    borderRadius: 12, padding: 10, gap: 10, borderWidth: 1,
+  },
+  trackNum:     { width: 20, fontSize: 11, fontWeight: '600', textAlign: 'center' },
+  trackTitle:   { fontSize: 13, fontWeight: '700' },
+  trackArtist:  { fontSize: 11, marginTop: 2 },
 });

@@ -19,13 +19,35 @@ export default function AdminScreen() {
   const [tickerText, setTickerText] = useState('');
   const [users, setUsers] = useState<any[]>([]);
   const [stats, setStats] = useState<any>(null);
+  const [comments, setComments] = useState<any[]>([]);
 
   useEffect(() => {
     if (!user?.isAdmin) return;
     loadLimits();
     loadStats();
     if (tab === 'users') loadUsers();
+    if (tab === 'comments') loadComments();
   }, [tab]);
+
+  const loadComments = async () => {
+    try {
+      const r = await fetch(`${API}/api/comments/all`, { headers: { Authorization: `Bearer ${token}` } });
+      const d = await r.json();
+      setComments(Array.isArray(d) ? d : []);
+    } catch {}
+  };
+
+  const deleteComment = async (id: string) => {
+    Alert.alert('Dzēst komentāru?', '', [
+      { text: t.cancel, style: 'cancel' },
+      { text: t.delete, style: 'destructive', onPress: async () => {
+        try {
+          await fetch(`${API}/api/comments/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+          setComments(prev => prev.filter((c: any) => c._id !== id));
+        } catch {}
+      }},
+    ]);
+  };
 
   const loadLimits = async () => {
     try {
@@ -141,10 +163,11 @@ export default function AdminScreen() {
   );
 
   const TABS = [
-    { id: 'upload', label: '☁️ Upload' },
-    { id: 'tracks', label: '🎵 Dziesmas' },
-    { id: 'ticker', label: '📢 Banner' },
-    { id: 'users', label: '👥 Lietotāji' },
+    { id: 'upload',   label: '☁️ Upload' },
+    { id: 'tracks',   label: '🎵 Dziesmas' },
+    { id: 'ticker',   label: '📢 Banner' },
+    { id: 'users',    label: '👥 Lietotāji' },
+    { id: 'comments', label: '💬 Komentāri' },
   ];
 
   return (
@@ -262,6 +285,32 @@ export default function AdminScreen() {
                 <View style={[s.userDot, { backgroundColor: u.role === 'admin' ? '#f59e0b' : '#00cfff' }]} />
                 <Text style={s.userName}>{u.username}</Text>
                 <Text style={[s.userRole, { color: u.role === 'admin' ? '#f59e0b' : '#555' }]}>{u.role}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* === KOMENTĀRI === */}
+        {tab === 'comments' && (
+          <View style={{ gap: 6 }}>
+            <Text style={s.sectionTitle}>💬 {comments.length} komentāri</Text>
+            {comments.length === 0 && (
+              <Text style={{ color: '#555', fontSize: 13, textAlign: 'center', marginTop: 20 }}>
+                Nav komentāru
+              </Text>
+            )}
+            {comments.map((c: any) => (
+              <View key={c._id} style={s.trackRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.trackTitle} numberOfLines={1}>
+                    <Text style={{ color: '#00cfff' }}>{c.username}</Text>
+                    {' → '}{c.trackId?.title || 'dziesma'}
+                  </Text>
+                  <Text style={s.trackArtist} numberOfLines={2}>{c.text}</Text>
+                </View>
+                <TouchableOpacity onPress={() => deleteComment(c._id)} style={{ padding: 8 }}>
+                  <Ionicons name="trash-outline" size={18} color="#ff446688" />
+                </TouchableOpacity>
               </View>
             ))}
           </View>
