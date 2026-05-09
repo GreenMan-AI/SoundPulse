@@ -37,7 +37,7 @@ export default function AuthScreen() {
         <View style={s.header}>
           <Text style={[s.logo, { color: accentColor }]}>🎵 SoundPulse</Text>
           <View style={s.statusRow}>
-            <View style={[s.statusDot, { backgroundColor: serverOnline ? '#22c55e' : '#f59e0b' }]} />
+            <View style={[s.statusDot, { backgroundColor: serverOnline ? '#29ba5e' : '#151b55' }]} />
             <Text style={[s.statusTxt, { color: colors.subText }]}>
               {serverOnline ? (t.serverReady || "Serveris gatavs") : (t.serverStarting || "Serveris mostas...")}
             </Text>
@@ -118,7 +118,7 @@ const s = StyleSheet.create({
   form: { gap: 12 },
   inputWrap: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 15, borderRadius: 16, borderWidth: 1, gap: 12 },
   input: { flex: 1, paddingVertical: 14, fontSize: 16, fontWeight: '600' },
-  errorTxt: { color: '#ef4444', textAlign: 'center', fontWeight: '700', fontSize: 13 },
+  errorTxt: { color: '#0c690a', textAlign: 'center', fontWeight: '700', fontSize: 13 },
   submitBtn: { paddingVertical: 16, borderRadius: 16, alignItems: 'center', marginTop: 10, elevation: 4, shadowOpacity: 0.2, shadowRadius: 5 },
-  submitBtnTxt: { color: '#000', fontWeight: '900', fontSize: 16 }
+  submitBtnTxt: { color: '#d81717', fontWeight: '900', fontSize: 16 }
 });

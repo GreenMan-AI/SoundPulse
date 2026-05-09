@@ -210,7 +210,7 @@ export default function AdminScreen() {
             <TextInput style={s.input} placeholder={t.uploadArtistPh} placeholderTextColor="#333" value={artist} onChangeText={setArtist} />
 
             <TouchableOpacity style={[s.fileBtn, file && s.fileBtnActive]} onPress={pickFile}>
-              <Ionicons name={file ? 'musical-note' : 'cloud-upload-outline'} size={28} color={file ? '#00cfff' : '#444'} />
+              <Ionicons name={file ? 'musical-note' : 'cloud-upload-outline'} size={28} color={file ? '#5caec0' : '#444'} />
               <Text style={[s.fileTxt, file && { color: '#00cfff' }]}>
                 {file ? file.name : t.uploadNote}
               </Text>
@@ -218,7 +218,7 @@ export default function AdminScreen() {
             </TouchableOpacity>
 
             {!!uploadStatus && (
-              <Text style={[s.status, { color: uploadStatus.startsWith('✅') ? '#22c55e' : uploadStatus.startsWith('⏳') ? '#00cfff' : '#ef4444' }]}>
+              <Text style={[s.status, { color: uploadStatus.startsWith('✅') ? '#46ad6c' : uploadStatus.startsWith('⏳') ? '#00cfff' : '#ef4444' }]}>
                 {uploadStatus}
               </Text>
             )}
@@ -247,7 +247,7 @@ export default function AdminScreen() {
                 </View>
                 <Text style={s.trackPlays}>{tr.plays || 0}▶</Text>
                 <TouchableOpacity onPress={() => deleteTrack(tr._id, tr.title)} style={{ padding: 8 }}>
-                  <Ionicons name="trash-outline" size={18} color="#ff446688" />
+                  <Ionicons name="trash-outline" size={18} color="#b9314a88" />
                 </TouchableOpacity>
               </View>
             ))}
@@ -282,9 +282,9 @@ export default function AdminScreen() {
             <Text style={s.sectionTitle}>👥 {users.length} lietotāji</Text>
             {users.map((u: any) => (
               <View key={u._id || u.username} style={s.userRow}>
-                <View style={[s.userDot, { backgroundColor: u.role === 'admin' ? '#f59e0b' : '#00cfff' }]} />
+                <View style={[s.userDot, { backgroundColor: u.role === 'admin' ? '#297e9d' : '#161717' }]} />
                 <Text style={s.userName}>{u.username}</Text>
-                <Text style={[s.userRole, { color: u.role === 'admin' ? '#f59e0b' : '#555' }]}>{u.role}</Text>
+                <Text style={[s.userRole, { color: u.role === 'admin' ? '#952c85' : '#555' }]}>{u.role}</Text>
               </View>
             ))}
           </View>
@@ -325,7 +325,7 @@ const s = StyleSheet.create({
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0a0a0f', gap: 12 },
   noAccess: { color: '#333', fontSize: 16 },
   header: { paddingHorizontal: 20, paddingTop: 54, paddingBottom: 14, backgroundColor: '#111118', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' },
-  title: { fontSize: 22, fontWeight: '800', color: '#f59e0b' },
+  title: { fontSize: 22, fontWeight: '800', color: '#498e43' },
   stat: { color: '#555', fontSize: 12 },
   tabBar: { backgroundColor: '#111118', borderBottomWidth: 1, borderBottomColor: '#1a1a25' },
   tabBtn: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: '#1a1a25' },

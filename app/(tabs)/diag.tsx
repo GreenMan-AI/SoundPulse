@@ -70,7 +70,7 @@ export default function DiagScreen() {
             <Ionicons
               name={c.status === 'ok' ? 'checkmark-circle' : 'close-circle'}
               size={20}
-              color={c.status === 'ok' ? '#22c55e' : '#ef4444'}
+              color={c.status === 'ok' ? '#5b9b73' : '#ef4444'}
             />
             <View style={{ flex: 1 }}>
               <Text style={s.checkName}>{c.name}</Text>

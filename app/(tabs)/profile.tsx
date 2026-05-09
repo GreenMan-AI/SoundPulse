@@ -17,12 +17,12 @@ const LANGS = [
 ];
 
 const ACCENT_COLORS = [
-  '#00cfff','#22d3ee','#0ea5e9',
+  '#05c9f5','#2297a9','#269acf',
   '#a855f7','#8b5cf6','#6366f1',
   '#ec4899','#f43f5e','#ef4444',
   '#f97316','#f59e0b','#eab308',
   '#22c55e','#10b981','#14b8a6',
-  '#ffffff','#94a3b8','#64748b',
+  '#ffffff','#94a3b8','#485d7b',
 ];
 
 export default function ProfileScreen() {
@@ -134,9 +134,9 @@ export default function ProfileScreen() {
         {/* Statistika */}
         <View style={s.statsRow}>
           {[
-            { v: tracks.length,         l: t.songs ?? 'Dziesmas', c: accentColor,  i: 'musical-notes' },
-            { v: (likes||[]).length,    l: t.likes ?? 'Patīk',    c: '#ef4444',    i: 'heart' },
-            { v: namedPlaylists.length, l: t.playlists?? 'Saraksti',c: '#a855f7', i: 'list' },
+            { v: (tracks ?? []).length,         l: t.songs ?? 'Dziesmas', c: accentColor,  i: 'musical-notes' },
+            { v: (likes ?? []).length,          l: t.likes ?? 'Patīk',    c: '#a31764e3',    i: 'heart' },
+            { v: (namedPlaylists ?? []).length, l: t.playlists ?? 'Saraksti', c: '#ac8c24', i: 'list' },
           ].map((st, i) => (
             <View key={i} style={[s.statCard, {
               backgroundColor: colors.card,
@@ -153,10 +153,10 @@ export default function ProfileScreen() {
         {/* Navigācija */}
         <View style={[s.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Text style={[s.sectionLbl, { color: colors.subText }]}>NAVIGĀCIJA</Text>
-          <MenuItem icon="list"         color="#a855f7"  label={t.playlist ?? 'Playliste'}    colors={colors} onPress={() => router.push('/playlist')} />
+          <MenuItem icon="list"         color="#623b87"  label={t.playlist ?? 'Playliste'}    colors={colors} onPress={() => router.push('/playlist')} />
           <MenuItem icon="share-social" color="#10b981"  label={t.shareTitle ?? 'Dalīties'}   colors={colors} onPress={() => router.push('/share')} />
           {user?.isAdmin && (
-            <MenuItem icon="shield-checkmark" color="#f59e0b" label={t.admin ?? 'Admin panelis'} colors={colors} onPress={() => router.push('/admin')} />
+            <MenuItem icon="shield-checkmark" color="#d29326" label={t.admin ?? 'Admin panelis'} colors={colors} onPress={() => router.push('/admin')} />
           )}
         </View>
 
@@ -264,7 +264,7 @@ export default function ProfileScreen() {
                   onPress={() => { setAccentColor(c); setShowColors(false); }}
                 >
                   {accentColor === c && (
-                    <Ionicons name="checkmark" size={16} color={c === '#ffffff' ? '#000' : '#000'} />
+                    <Ionicons name="checkmark" size={16} color={c === '#c12222' ? '#702e2e' : '#735959'} />
                   )}
                 </TouchableOpacity>
               ))}
@@ -369,7 +369,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 10, paddingVertical: 4,
     borderRadius: 10, borderWidth: 1,
   },
-  adminBadgeTxt: { color: '#f59e0b', fontSize: 11, fontWeight: '800' },
+  adminBadgeTxt: { color: '#8b692c', fontSize: 11, fontWeight: '800' },
   statsRow:      { flexDirection: 'row', gap: 10, marginBottom: 14 },
   statCard:      {
     flex: 1, borderRadius: 16, padding: 12,
@@ -386,13 +386,13 @@ const s = StyleSheet.create({
   privacyTitle:  { color: '#00ff88', fontSize: 14, fontWeight: '700' },
   privacyDesc:   { fontSize: 13, lineHeight: 18 },
   privacyBadges: { flexDirection: 'row', gap: 8 },
-  privacyBadge:  { backgroundColor: '#00ff8818', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 4 },
+  privacyBadge:  { backgroundColor: '#113b2818', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 4 },
   privacyBadgeTxt:{ color: '#00ff88', fontSize: 11, fontWeight: '700' },
   logoutBtn:     {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: 10, padding: 16, borderRadius: 16, borderWidth: 1, marginBottom: 20,
   },
-  logoutTxt:     { color: '#ef4444', fontSize: 15, fontWeight: '700' },
+  logoutTxt:     { color: '#b53a3a', fontSize: 15, fontWeight: '700' },
   overlay:       { flex: 1, backgroundColor: 'rgba(0,0,0,0.75)', justifyContent: 'flex-end' },
   modal:         { borderRadius: 24, borderWidth: 1, padding: 24, margin: 16, marginBottom: 32 },
   modalTitle:    { fontSize: 20, fontWeight: '900', marginBottom: 20, textAlign: 'center' },
@@ -406,6 +406,6 @@ const s = StyleSheet.create({
   pwInput:       { padding: 14, borderRadius: 12, borderWidth: 1, marginBottom: 10, fontSize: 14 },
   pwBtns:        { flexDirection: 'row', gap: 10, marginTop: 8 },
   pwBtn:         { flex: 1, padding: 14, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  errTxt:        { color: '#ef4444', textAlign: 'center', marginBottom: 8, fontWeight: '600' },
+  errTxt:        { color: '#cd1f1f', textAlign: 'center', marginBottom: 8, fontWeight: '600' },
   okTxt:         { color: '#10b981', textAlign: 'center', marginBottom: 8, fontWeight: '600' },
 });

@@ -76,7 +76,7 @@ export default function UploadScreen() {
         name: file.name || 'track.mp3',
       } as any);
       form.append('title',  title.trim());
-      form.append('artist', artist.trim() || t.noArtist ?? 'Nav izpildītāja');
+      form.append('artist', artist.trim() || t.noArtist || 'Nav izpildītāja');
 
       const r = await fetch(`${API}/api/upload`, {
         method:  'POST',
@@ -95,7 +95,7 @@ export default function UploadScreen() {
         await loadMyTracks();
         setTimeout(() => setStatus(''), 3000);
       } else {
-        setStatus(`❌ ${d.error || t.uploadFailed ?? 'Kļūda'}`);
+        setStatus(`❌ ${d.error || t.uploadFailed || 'Kļūda'}`);
       }
     } catch (e: any) {
       setStatus(`❌ ${e.message}`);

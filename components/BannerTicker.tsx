@@ -84,7 +84,7 @@ const s = StyleSheet.create({
     height: 20,
   },
   text: {
-    color: '#f59e0b',
+    color: '#313c9e',
     fontSize: 13,
     fontWeight: '700',
     letterSpacing: 0.3,
@@ -96,7 +96,7 @@ const s = StyleSheet.create({
     flexShrink: 0,
   },
   closeTxt: {
-    color: '#555',
+    color: '#a92323',
     fontSize: 14,
     fontWeight: '700',
   },

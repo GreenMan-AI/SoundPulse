@@ -119,7 +119,7 @@ export default function ShareScreen() {
         <View style={s.statsRow}>
           {[
             { e: '🎵', v: stats?.tracks ?? 0, l: t.songs  ?? 'Dziesmas',      c: accentColor },
-            { e: '🎧', v: stats?.plays  ?? 0, l: t.plays  ?? 'Atskaņojumi',   c: '#a855f7'  },
+            { e: '🎧', v: stats?.plays  ?? 0, l: t.plays  ?? 'Atskaņojumi',   c: '#dd1536'  },
             { e: '🟢', v: '24/7',             l: 'Online',                     c: '#22c55e'  },
           ].map((st, i) => (
             <View key={i} style={[s.statBox, {

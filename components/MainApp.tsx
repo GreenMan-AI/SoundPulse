@@ -18,8 +18,8 @@ const INACTIVITY_MS = 2 * 60 * 1000; // 2 minūtes
 // ════════════════════════════════
 //  HAMELEONS
 // ════════════════════════════════
-const COLORS = ['#00cfff','#a855f7','#22d3ee','#f59e0b','#10b981','#ef4444','#6366f1','#ec4899'];
-const TRACK_COLORS = ['#00cfff','#a855f7','#f59e0b','#10b981','#ef4444','#6366f1','#ec4899','#22d3ee'];
+const COLORS = ['#00cfff','#a855f7','#22d3ee','#398d58','#10b981','#ef4444','#6366f1','#ec4899'];
+const TRACK_COLORS = ['#00cfff','#a855f7','#644716','#10b981','#ef4444','#6366f1','#ec4899','#22d3ee'];
 
 function useChameleon(ms = 3000) {
   const [i, setI] = useState(0);

@@ -10,8 +10,8 @@ import { useApp, API } from '../../components/AppContext';
 import TrackCard from '../../components/TrackCard';
 
 const COLORS = [
-  '#00cfff','#a855f7','#f59e0b','#10b981',
-  '#ef4444','#6366f1','#ec4899','#22d3ee',
+  '#389ab0','#a855f7','#af7b40','#10b981',
+  '#ef4444','#6366f1','#8a4f6c','#22d3ee',
 ];
 
 type SortKey = 'default' | 'plays' | 'title' | 'artist';

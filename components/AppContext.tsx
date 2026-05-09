@@ -5,8 +5,8 @@ import { translations, Lang } from '../i18n';
 export const API = 'https://soundpulse-oe3r.onrender.com';
 
 export const themes = {
-  dark: { bg: '#0a0a0f', card: '#111118', text: '#ffffff', subText: '#999999', border: '#1e1e2a', tabBar: '#0f0f14' },
-  light: { bg: '#f4f4f9', card: '#ffffff', text: '#1a1a1a', subText: '#666666', border: '#e0e0e0', tabBar: '#ffffff' }
+  dark: { bg: '#0e0101', card: '#085218', text: '#19ec1c', subText: '#f0e7e7', border: '#0707f4', tabBar: '#090966' },
+  light: { bg: '#0f0f74', card: '#861010', text: '#1a1a1a', subText: '#b12b2b', border: '#953333', tabBar: '#872b2b' }
 };
 
 export type ThemeMode = 'light' | 'dark';
@@ -25,6 +25,13 @@ interface AppContextType {
   playlist: any[]; addToPlaylist: (t: any) => void; removeFromPlaylist: (id: string) => void;
   playNext: () => void; playPrev: () => void;
   sleepTimer: number | null; setSleepTimer: (min: number | null) => void;
+
+  // Papildinātie lauki
+  namedPlaylists: any[];
+  likes: any[];
+  profileData: any;
+  saveProfile: (data: any) => Promise<void>;
+  uploadAvatar: (uri: string) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType>({} as AppContextType);
@@ -41,6 +48,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [playing, setPlaying] = useState<any>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [sleepTimer, setSleepTimer] = useState<number | null>(null);
+
+  // --- JAUNIE MAINĪGIE ---
+  const [namedPlaylists, setNamedPlaylists] = useState<any[]>([]);
+  const [likes, setLikes] = useState<any[]>([]);
+  const [profileData, setProfileData] = useState<any>(null);
 
   const colors = { ...themes[themeMode], accent: accentColor };
   const t = translations[lang];
@@ -59,7 +71,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         try {
           const res = await fetch(`${API}/api/me`, { headers: { Authorization: `Bearer ${sToken}` } });
           const d = await res.json();
-          if (d.username) { setUser({ ...d, isAdmin: d.role === 'admin' }); setLangChosen(true); }
+          if (d.username) { 
+            setUser({ ...d, isAdmin: d.role === 'admin' }); 
+            setProfileData(d); // Iestatām sākotnējos profila datus
+            setLangChosen(true); 
+          }
         } catch { setLangChosen(false); }
       }
     })();
@@ -88,6 +104,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (d.token) {
         setUser({ ...d, isAdmin: d.role === 'admin' });
         setToken(d.token);
+        setProfileData(d);
         await AsyncStorage.setItem('user_token', d.token);
         setLangChosen(true);
         return null;
@@ -96,7 +113,32 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     } catch { return "Server error"; }
   };
 
-  const logout = () => { setUser(null); setToken(''); AsyncStorage.removeItem('user_token'); setLangChosen(false); };
+  const logout = () => { 
+    setUser(null); 
+    setToken(''); 
+    setProfileData(null);
+    AsyncStorage.removeItem('user_token'); 
+    setLangChosen(false); 
+  };
+
+  // --- JAUNĀS FUNKCIJAS ---
+  const saveProfile = async (data: any) => {
+    try {
+      // Šeit var pievienot API izsaukumu, ja nepieciešams saglabāt serverī
+      setProfileData({ ...profileData, ...data });
+    } catch (e) {
+      console.error("Profile save error", e);
+    }
+  };
+
+  const uploadAvatar = async (uri: string) => {
+    try {
+      // Šeit var pievienot loģiku bildes augšupielādei uz tavu API
+      setProfileData({ ...profileData, avatarUrl: uri });
+    } catch (e) {
+      console.error("Avatar upload error", e);
+    }
+  };
 
   return (
     <AppContext.Provider value={{
@@ -107,10 +149,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       tracks, setTracks, playing, setPlaying, isPlaying, setIsPlaying,
       playlist, addToPlaylist: (tr) => { if (!playlist.find(x => x._id === tr._id)) setPlaylist([...playlist, tr]); },
       removeFromPlaylist: (id) => setPlaylist(playlist.filter(x => x._id !== id)),
-      playNext, playPrev, sleepTimer, setSleepTimer
+      playNext, playPrev, sleepTimer, setSleepTimer,
+      
+      // Iekļaujam jaunos laukus value objektā
+      namedPlaylists,
+      likes,
+      profileData,
+      saveProfile,
+      uploadAvatar
     }}>
       {children}
     </AppContext.Provider>
   );
 }
+
 export const useApp = () => useContext(AppContext);

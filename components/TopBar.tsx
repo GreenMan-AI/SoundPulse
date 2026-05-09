@@ -44,5 +44,5 @@ const s = StyleSheet.create({
   ticker:   { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, height: 26, overflow: 'hidden' },
   icon:     { fontSize: 13, marginRight: 6, flexShrink: 0 },
   overflow: { flex: 1, overflow: 'hidden' },
-  text:     { color: '#00ff88', fontSize: 12, fontWeight: '800', position: 'absolute', width: 2000 },
+  text:     { color: '#22c679', fontSize: 12, fontWeight: '800', position: 'absolute', width: 2000 },
 });
